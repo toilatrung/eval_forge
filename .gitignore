@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+
+# Kết quả eval — không commit output run, trừ khi cố tình đặt mẫu demo ở nơi khác
+results/*.json
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

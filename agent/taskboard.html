@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Taskboard — LLM Eval Harness</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #eef0f3;
+    --border: #dde1e6;
+    --text: #1a1d23;
+    --text-dim: #5b6270;
+    --accent: #3457d5;
+    --accent-bg: #e8edfc;
+    --done: #1f9254;
+    --done-bg: #e6f6ec;
+    --risk: #b3541e;
+    --risk-bg: #fdf0e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --surface: #1c1f26;
+      --surface-2: #23262e;
+      --border: #333844;
+      --text: #e6e8eb;
+      --text-dim: #9aa1ad;
+      --accent: #7c9bff;
+      --accent-bg: #232a45;
+      --done: #4fd382;
+      --done-bg: #16301f;
+      --risk: #e2954d;
+      --risk-bg: #3a2716;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  header {
+    padding: 20px 24px 12px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 0.9rem; margin: 0 0 16px; }
+  .progress-wrap {
+    background: var(--surface-2);
+    border-radius: 8px;
+    height: 10px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s ease;
+  }
+  .progress-label { font-size: 0.8rem; color: var(--text-dim); }
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+  }
+  .phase {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .phase.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .phase summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .phase summary::-webkit-details-marker { display: none; }
+  .phase summary .arrow { transition: transform 0.15s ease; color: var(--text-dim); font-size: 0.8rem; }
+  .phase[open] summary .arrow { transform: rotate(90deg); }
+  .phase-meta { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--text-dim); font-weight: 400; }
+  .badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .badge.current { background: var(--accent-bg); color: var(--accent); }
+  .badge.done { background: var(--done-bg); color: var(--done); }
+  .phase-body { padding: 4px 16px 16px; border-top: 1px solid var(--border); }
+  .task {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 4px;
+    border-radius: 6px;
+  }
+  .task:hover { background: var(--surface-2); }
+  .task input[type=checkbox] {
+    margin-top: 3px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+  .task label { font-size: 0.9rem; cursor: pointer; }
+  .task.checked label { color: var(--text-dim); text-decoration: line-through; }
+  .optional-tag { font-size: 0.7rem; color: var(--text-dim); font-style: italic; margin-left: 4px; }
+  .done-note {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: var(--done-bg);
+    color: var(--done);
+    border-radius: 6px;
+    font-size: 0.82rem;
+  }
+  .risk-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px 16px;
+  }
+  .risk-section h2 { font-size: 1rem; margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
+  .risk-phase { color: var(--risk); background: var(--risk-bg); border-radius: 999px; padding: 2px 8px; font-size: 0.75rem; white-space: nowrap; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; }
+  button {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover { background: var(--surface-2); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Taskboard — LLM Evaluation Harness + Internal Platform</h1>
+  <p class="subtitle">Xem <code>agent/AGENT.md</code> cho quyết định thiết kế đầy đủ. Tick task xong ngay khi làm — tiến độ tự lưu vào localStorage của trình duyệt này.</p>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="progress-label" id="progressLabel">0 / 0 task cốt lõi hoàn thành</div>
+</header>
+<main>
+  <div class="toolbar">
+    <button id="expandAll">Mở tất cả</button>
+    <button id="collapseAll">Thu tất cả</button>
+    <button id="resetBoard">Reset tiến độ</button>
+  </div>
+
+  <div id="phases"></div>
+
+  <div class="risk-section">
+    <h2>Risk watchlist (theo dõi xuyên suốt)</h2>
+    <table>
+      <thead><tr><th>#</th><th>Rủi ro</th><th>Theo dõi ở phase</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Judge trả JSON sai format</td><td><span class="risk-phase">Phase 2</span></td></tr>
+        <tr><td>2</td><td>Tốn tiền API ngoài dự tính</td><td><span class="risk-phase">Phase 2–3</span></td></tr>
+        <tr><td>3</td><td>Rate limit API</td><td><span class="risk-phase">Phase 2–3</span></td></tr>
+        <tr><td>4</td><td>API key leak lên GitHub</td><td><span class="risk-phase">Phase 1, 6</span></td></tr>
+        <tr><td>5</td><td>Self-preference bias vẫn còn dù đổi model</td><td><span class="risk-phase">Phase 5</span></td></tr>
+        <tr><td>6</td><td>Streamlit session_state mất dữ liệu</td><td><span class="risk-phase">Phase 5</span></td></tr>
+        <tr><td>7</td><td>Test case quá ít/không đa dạng</td><td><span class="risk-phase">Phase 1</span></td></tr>
+        <tr><td>8</td><td>Deploy thiếu secrets</td><td><span class="risk-phase">Phase 6</span></td></tr>
+        <tr><td>9</td><td>Scope creep sang UI đẹp</td><td><span class="risk-phase">Toàn bộ</span></td></tr>
+        <tr><td>10</td><td>Không có thời gian viết README</td><td><span class="risk-phase">Phase 6</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const PHASES = [
+  {
+    id: "p1", title: "Phase 1 — Nền tảng", when: "Ngày 1, sáng", current: true,
+    tasks: [
+      "Init repo + cấu trúc folder cơ bản (llm_client.py, evaluator.py, llm_judge.py, runner.py, metrics.py, report.py, app.py, pages/, test_cases/, results/)",
+      ".gitignore — loại .env, __pycache__/, .venv/ (trước commit đầu tiên)",
+      ".env.example (tên biến: OPENAI_API_KEY, ANTHROPIC_API_KEY)",
+      "requirements.txt pin version cụ thể (openai, anthropic, streamlit, pandas, pydantic, python-dotenv, pytest)",
+      "Schema Pydantic cho test case (id, category, prompt, expected/reference, difficulty...)",
+      "Viết 15–20 test case, chia 3 category factual/rag/safety, có case khó (ambiguous/adversarial)",
+      "Verify: load toàn bộ test case qua schema Pydantic không lỗi",
+    ],
+    doneNote: "Done khi: repo có cấu trúc, .env an toàn, ≥15 test case load được qua schema.",
+  },
+  {
+    id: "p2", title: "Phase 2 — Core eval engine", when: "Ngày 1, chiều",
+    tasks: [
+      "llm_client.py — gọi OpenAI API (gpt-4o-mini), max_tokens thấp cho debug, retry + backoff",
+      "evaluator.py — rule-based, chạy độc lập, test bằng vài case tay",
+      "llm_judge.py — prompt ép JSON đúng schema (response_format/tool-use nếu API hỗ trợ)",
+      "llm_judge.py — strip markdown fences trước khi parse",
+      "llm_judge.py — try/except quanh JSON parse, không throw làm crash toàn run",
+      "llm_judge.py — log riêng parse_failure thành 1 record/metric",
+      "pytest cho evaluator.py — vài unit test cơ bản|optional",
+    ],
+    doneNote: "Done khi: llm_client/evaluator/llm_judge chạy độc lập trên vài case tay, judge xử lý parse failure rõ ràng.",
+  },
+  {
+    id: "p3", title: "Phase 3 — Pipeline hoàn chỉnh", when: "Ngày 1, tối",
+    tasks: [
+      "runner.py — nối llm_client → evaluator → llm_judge, chạy full test set, lưu results/<run_id>.json",
+      "runner.py — time.sleep() nhỏ giữa các call (rate limit)",
+      "metrics.py — accuracy theo category, agreement rate, parse_failure_rate",
+      "report.py — xuất báo cáo tổng hợp từ metrics",
+      "Chạy full test set 1 lần thật, xác nhận results/*.json đúng, không crash",
+    ],
+    doneNote: "Done khi: 1 lần chạy full pipeline đầu-cuối, có file kết quả + báo cáo tổng hợp.",
+  },
+  {
+    id: "p4", title: "Phase 4 — Platform hóa", when: "Ngày 2, sáng",
+    tasks: [
+      "app.py — Streamlit skeleton, multi-page",
+      "Trang Run Evaluation — chạy runner.py từ UI, hiển thị tiến trình",
+      "Trang Results Explorer — load results/*.json, bảng Pandas + filter theo category",
+    ],
+    doneNote: "Done khi: chạy được 1 eval từ UI và xem lại kết quả trên UI, không cần terminal.",
+  },
+  {
+    id: "p5", title: "Phase 5 — Tính năng nâng cao", when: "Ngày 2, chiều",
+    tasks: [
+      "Trang Compare Runs — pairwise A/B giữa 2 run/model",
+      "Trang Calibration — chấm human label, lưu ra file JSON ngay sau mỗi lần chấm (không chỉ session_state)",
+      "Trang Calibration — tính agreement rate judge vs human",
+    ],
+    doneNote: "Done khi: có agreement rate thực tế (không phải số giả định), pairwise compare hoạt động trên UI.",
+  },
+  {
+    id: "p6", title: "Phase 6 — Đóng gói & Demo", when: "Ngày 2, tối",
+    tasks: [
+      "README.md: problem statement → architecture diagram → sample report → screenshot → link demo",
+      "Deploy Streamlit Community Cloud — dùng st.secrets, test deploy sớm (không dồn tối cuối)",
+      "Kiểm tra lại git history không có API key (git log -p hoặc gitleaks)",
+      "Ghi lại 2–3 insight thật để kể khi phỏng vấn (parse failure rate, agreement rate thực tế)",
+      "Rà lại Definition of Done tổng thể ở AGENT.md §7",
+    ],
+    doneNote: "Done khi: link demo public chạy được không cần setup local, README đầy đủ, không lộ key.",
+  },
+];
+
+const STORAGE_KEY = "eval-harness-taskboard-v1";
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function parseTask(raw) {
+  const optional = raw.includes("|optional");
+  const text = raw.replace("|optional", "");
+  return { text, optional };
+}
+
+function render() {
+  const state = loadState();
+  const container = document.getElementById("phases");
+  container.innerHTML = "";
+
+  let totalCore = 0, doneCore = 0;
+
+  PHASES.forEach(phase => {
+    const details = document.createElement("details");
+    details.className = "phase" + (phase.current ? " current" : "");
+    details.open = !!phase.current;
+
+    const tasksParsed = phase.tasks.map(parseTask);
+    const coreCount = tasksParsed.filter(t => !t.optional).length;
+    const coreDone = tasksParsed.filter((t, i) => !t.optional && state[phase.id + "-" + i]).length;
+    totalCore += coreCount;
+    doneCore += coreDone;
+    const phaseComplete = coreCount > 0 && coreDone === coreCount;
+
+    const summary = document.createElement("summary");
+    summary.innerHTML = `
+      <span><span class="arrow">▶</span> ${phase.title}</span>
+      <span class="phase-meta">
+        ${phase.when}
+        ${phase.current ? '<span class="badge current">hiện tại</span>' : ""}
+        ${phaseComplete ? '<span class="badge done">done</span>' : `<span class="badge">${coreDone}/${coreCount}</span>`}
+      </span>`;
+    details.appendChild(summary);
+
+    const body = document.createElement("div");
+    body.className = "phase-body";
+
+    tasksParsed.forEach((t, i) => {
+      const key = phase.id + "-" + i;
+      const row = document.createElement("div");
+      row.className = "task" + (state[key] ? " checked" : "");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = key;
+      cb.checked = !!state[key];
+      cb.addEventListener("change", () => {
+        const s = loadState();
+        s[key] = cb.checked;
+        saveState(s);
+        render();
+      });
+      const label = document.createElement("label");
+      label.htmlFor = key;
+      label.innerHTML = t.text + (t.optional ? '<span class="optional-tag">(optional)</span>' : "");
+      row.appendChild(cb);
+      row.appendChild(label);
+      body.appendChild(row);
+    });
+
+    const note = document.createElement("div");
+    note.className = "done-note";
+    note.textContent = phase.doneNote;
+    body.appendChild(note);
+
+    details.appendChild(body);
+    container.appendChild(details);
+  });
+
+  const pct = totalCore ? Math.round((doneCore / totalCore) * 100) : 0;
+  document.getElementById("progressBar").style.width = pct + "%";
+  document.getElementById("progressLabel").textContent = `${doneCore} / ${totalCore} task cốt lõi hoàn thành (${pct}%)`;
+}
+
+document.getElementById("expandAll").addEventListener("click", () => {
+  document.querySelectorAll(".phase").forEach(d => d.open = true);
+});
+document.getElementById("collapseAll").addEventListener("click", () => {
+  document.querySelectorAll(".phase").forEach(d => d.open = false);
+});
+document.getElementById("resetBoard").addEventListener("click", () => {
+  if (confirm("Xóa toàn bộ tiến độ đã tick?")) {
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
