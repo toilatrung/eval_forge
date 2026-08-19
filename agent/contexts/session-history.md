@@ -287,3 +287,51 @@ Format 1 entry:
 - **Việc còn lại / next:** Bắt đầu **Phase 5 — Tính năng nâng cao**: `pages/compare_runs.py`
   (so sánh pairwise A/B giữa 2 run/model), `pages/calibration.py` (chấm human label, lưu file
   JSON ngay sau mỗi lần chấm, tính agreement rate judge vs human).
+
+## Session 10 — 2026-08-19
+- **Mục tiêu phiên:** Sửa `pages/calibration.py` (user báo "trang này chưa chạy" — đúng, vẫn
+  là stub) và hoàn thiện toàn bộ Phase 5 (`compare_runs.py` + `calibration.py`).
+- **Việc đã làm:**
+  - Giải thích cho user: `calibration.py` "chưa chạy" vì đây vẫn là file stub (chỉ có
+    docstring) từ Phase 1, đúng theo roadmap — Phase 5 chưa bắt đầu tại thời điểm đó.
+  - Mở rộng `metrics.py`: `list_runs()` (liệt kê run, loại `*.labels.json`), `load_labels()`,
+    `save_label()` (ghi file ngay lập tức), `compute_metrics(labels=...)` (agreement rate
+    thật), `load_and_compute()` tự động nạp labels đi kèm.
+  - Mở rộng `runner.py`: `CaseResult` lưu thêm `prompt`/`context`/`reference_answer`/`rubric`
+    (cần cho Calibration hiển thị đủ ngữ cảnh) — thêm `_base_fields()` để tránh lặp code ở
+    4 nhánh return của `run_test_case()`.
+  - Viết `pages/calibration.py`: chọn run → chọn case → hiện đủ ngữ cảnh + judge verdict →
+    người chấm chọn verdict của mình (mặc định = verdict judge) + ghi chú → nút "Lưu nhãn"
+    gọi `save_label()` + `st.rerun()`.
+  - Viết `pages/compare_runs.py`: chọn run A/B → bảng tổng quan + theo category cạnh nhau →
+    bảng theo case phân loại regression/improvement/thay đổi/không đổi.
+  - Sửa `app.py`, `pages/results_explorer.py` dùng `list_runs()` thay vì `glob("*.json")`
+    trực tiếp — tránh nhặt nhầm file `*.labels.json`. Thêm hiển thị `prompt` vào chi tiết
+    case ở Results Explorer (trước đây thiếu, chỉ có từ Phase 5 vì `CaseResult` mới lưu).
+  - **Verify thật bằng `AppTest`** (không chỉ `py_compile`):
+    - Cả 5 trang (`app.py` + 4 trang `pages/`) chạy 0 exception.
+    - Click thật nút "Lưu nhãn" ở Calibration → xác nhận file `<run_id>.labels.json` được
+      tạo đúng nội dung (`human_verdict`, `note`, `labeled_at`) → xóa file test ngay sau đó
+      (không để lại nhãn giả trong dữ liệu thật của dự án).
+    - Test tay `compute_metrics(labels=...)` với 17/18 case khớp judge → `agreement_rate_vs_human
+      = 0.9444` khớp đúng tính tay.
+    - Tạo 1 run test tạm (copy từ run thật, đổi 2 verdict để giả lập regression + improvement)
+      → `pages/compare_runs.py` nhận diện đúng 1 regression + 1 improvement → xóa file test.
+  - Phát hiện + fix bug tiềm ẩn: `list_runs()`/liệt kê run phải lọc `*.labels.json` — nếu
+    không, file nhãn (cùng thư mục `results/`, cũng khớp pattern `*.json`) có thể bị nhặt
+    nhầm làm "run mới nhất" (do `.labels.json` > `.json` khi sort alphabet) và crash.
+  - Cập nhật `agent/taskboard.html` (Phase 5 done, Phase 6 current), `docs/progress-report.md`
+    và `agent/contexts/progress-report.html` (giải thích module mới, insight về bug
+    `list_runs`). Republish artifact.
+- **Quyết định đưa ra:**
+  - `CaseResult` mở rộng thêm 4 field ngữ cảnh gốc — run cũ (Phase 3) sẽ thiếu field này,
+    Calibration xử lý fallback (thông báo rõ, không lỗi) thay vì bắt buộc chạy lại toàn bộ.
+  - Default verdict ở Calibration = verdict của judge (không để trống) để giảm effort click
+    khi người chấm đồng ý, nhưng vẫn phải bấm "Lưu" mới tính là đã chấm.
+  - "So sánh" ở Compare Runs là so sánh 2 **run** (trước/sau đổi model/prompt/test case),
+    không phải chạy song song 2 model trong 1 request — vì dự án hiện chỉ test 1 model tại 1
+    thời điểm.
+- **Trạng thái:** done — **Phase 5 hoàn thành, không còn module nào ở dạng stub**.
+- **Việc còn lại / next:** Bắt đầu **Phase 6 — Đóng gói & Demo**: README.md đầy đủ (problem
+  statement, architecture, sample report, screenshot, link demo), deploy Streamlit Community
+  Cloud (`st.secrets`), kiểm tra git history không có API key, ghi insight thật cuối cùng.

@@ -7,11 +7,9 @@ Giữ trang chủ tối giản theo đúng nguyên tắc "UI chỉ cần đủ d
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import streamlit as st
 
-from metrics import load_and_compute
+from metrics import list_runs, load_and_compute
 from schemas import load_test_cases
 
 st.set_page_config(page_title="eval_forge", page_icon="🧪", layout="wide")
@@ -43,7 +41,7 @@ with col1:
 
 with col2:
     st.subheader("Run gần nhất")
-    run_files = sorted(Path("results").glob("*.json"))
+    run_files = list_runs()
     if not run_files:
         st.info("Chưa có run nào. Sang trang **Run Evaluation** để chạy lần đầu.")
     else:

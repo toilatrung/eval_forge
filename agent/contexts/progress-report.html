@@ -366,7 +366,7 @@
 // ============================================================================
 const REPORT = {
   lastUpdated: "2026-08-19",
-  currentPhase: 5,
+  currentPhase: 6,
   totalPhases: 6,
 
   phases: [
@@ -410,12 +410,19 @@ const REPORT = {
       ],
     },
     {
-      num: 5, name: "Tính năng nâng cao", when: "Ngày 2, chiều", status: "current",
-      summary: "Trang Compare Runs (pairwise A/B), trang Calibration (agreement rate với human label).",
-      highlights: [],
+      num: 5, name: "Tính năng nâng cao", when: "Ngày 2, chiều", status: "done",
+      summary: "pages/compare_runs.py, pages/calibration.py — không còn module nào ở dạng stub.",
+      highlights: [
+        "metrics.py mở rộng: list_runs()/load_labels()/save_label() + compute_metrics(labels=...) — agreement rate thật",
+        "runner.py mở rộng: CaseResult lưu thêm prompt/context/reference_answer/rubric cho Calibration",
+        "pages/calibration.py: chấm nhãn người, lưu file ngay khi bấm Lưu (không chỉ session_state)",
+        "pages/compare_runs.py: so sánh 2 run — tổng quan, theo category, theo case (regression/improvement)",
+        "Phát hiện + fix bug tiềm ẩn: list_runs() phải lọc *.labels.json, không thì bị nhặt nhầm làm 'run mới nhất'",
+        "Verify bằng AppTest thật: click nút Lưu nhãn → file ghi đúng; giả lập 1 run test có regression+improvement → nhận diện đúng, rồi xoá file test",
+      ],
     },
     {
-      num: 6, name: "Đóng gói & Demo", when: "Ngày 2, tối", status: "pending",
+      num: 6, name: "Đóng gói & Demo", when: "Ngày 2, tối", status: "current",
       summary: "README đầy đủ, deploy Streamlit Community Cloud, insight thật cho phỏng vấn.",
       highlights: [],
     },
@@ -506,25 +513,29 @@ const REPORT = {
       explain: {
         role: "Nối 3 module Phase 2 thành pipeline chạy được trên toàn bộ test set, và là nơi DUY NHẤT quyết định &quot;khi 1 case lỗi thì làm gì&quot; — không để 1 case lỗi làm hỏng cả 18 case.",
         how: "Với mỗi case: gọi call_model() lấy output — lỗi LLMClientError (hết retry/4xx) → dừng ở đó, status call_error, không gọi evaluator/judge. Có output → luôn chạy evaluate() (rule signal, luôn thành công), rồi judge() — JudgeParseError → giữ output+rule signal, status judge_parse_failure; JudgeCallError → status call_error nhưng vẫn giữ những gì đã có. Nghỉ 1s giữa mỗi case tránh rate limit. Toàn bộ kết quả (kể cả case lỗi) đóng gói vào 1 file JSON theo timestamp UTC.",
-        why: "Quyết định quan trọng nhất: lỗi 1 case KHÔNG được lan sang case khác — điều chỉnh nhỏ so với ghi chú Session 6 (\"JudgeCallError nên dừng cả run\"): khi thực viết code, dừng cả run vì 1 network hiccup giữa chừng sẽ làm mất kết quả của toàn bộ case đã chạy thành công trước đó. Đổi lại, mỗi case lỗi vẫn được ghi rõ trạng thái + lý do, không &quot;giấu&quot; lỗi.",
+        why: "Quyết định quan trọng nhất: lỗi 1 case KHÔNG được lan sang case khác — điều chỉnh nhỏ so với ghi chú Session 6 (\"JudgeCallError nên dừng cả run\"): khi thực viết code, dừng cả run vì 1 network hiccup giữa chừng sẽ làm mất kết quả của toàn bộ case đã chạy thành công trước đó. Đổi lại, mỗi case lỗi vẫn được ghi rõ trạng thái + lý do, không &quot;giấu&quot; lỗi. (Phase 5) Thêm prompt/context/reference_answer/rubric vào CaseResult vì Calibration cần đủ ngữ cảnh gốc mới chấm công bằng — chỉ nhìn output trần trụi là không đủ.",
       },
       symbols: [
-        { sig: 'class CaseResult', desc: "test_case_id, category, difficulty, status, model_output, rule_signals, judge_verdict/score/reasoning, error" },
+        { sig: 'class CaseResult', desc: "+ Phase 5: prompt, context, reference_answer, rubric — ngữ cảnh gốc cho Calibration" },
+        { sig: '_base_fields(tc) -> dict', desc: "field chung, tránh lặp ở 4 nhánh return của run_test_case()" },
         { sig: 'run_test_case(tc) -> CaseResult', desc: "chạy 1 case qua toàn bộ chuỗi, bắt riêng từng loại lỗi" },
         { sig: 'run(*, test_cases_dir, output_dir, sleep_seconds) -> dict', desc: "load toàn bộ case, chạy tuần tự, lưu results/<run_id>.json" },
       ],
     },
     {
       file: "metrics.py", status: "done",
-      role: "Chuyển results/*.json (dữ liệu thô) thành số liệu tổng hợp: accuracy, tỷ lệ lỗi.",
+      role: "Chuyển results/*.json (dữ liệu thô) thành số liệu tổng hợp: accuracy, tỷ lệ lỗi, agreement rate thật (Phase 5).",
       explain: {
-        role: "Input cho report.py và sau này cho trang Results Explorer (Phase 4) — biến từng case riêng lẻ thành số liệu đọc nhanh được.",
-        how: "Với mỗi category, CHỈ tính accuracy trên case status ok (đã judge) — case call_error/judge_parse_failure không có verdict nên không tính vào accuracy, tránh ngầm coi lỗi hệ thống là &quot;fail&quot; của model. parse_failure_rate/call_error_rate tính trên TỔNG số case (kể cả case không judge được) vì đây là số liệu về độ tin cậy hệ thống, không phải chất lượng model.",
-        why: "agreement_rate_vs_human cố ý luôn trả None ở Phase 3 — cần nhãn người thật từ trang Calibration (Phase 5). Đúng nguyên tắc đã chốt: thà thiếu số còn hơn bịa số (rủi ro #5).",
+        role: "Input cho report.py, Results Explorer, và (Phase 5) lưu/đọc nhãn người + tính agreement rate thật cho Calibration.",
+        how: "Với mỗi category, CHỈ tính accuracy trên case status ok (đã judge) — case call_error/judge_parse_failure không tính vào accuracy, tránh ngầm coi lỗi hệ thống là &quot;fail&quot; của model. list_runs() lọc bỏ *.labels.json khi liệt kê run. save_label() ghi/đè 1 nhãn vào file <run_id>.labels.json NGAY khi gọi. load_and_compute() tự load_labels() và truyền vào compute_metrics() nên agreement_rate_vs_human tự có số thật ngay khi Calibration lưu ≥1 nhãn.",
+        why: "agreement_rate_vs_human chỉ None khi chưa có nhãn — đúng nguyên tắc thà thiếu số còn hơn bịa số (rủi ro #5). Tách trách nhiệm: calibration.py chỉ gọi save_label(), nơi khác không cần biết nhãn lưu ở đâu.",
       },
       symbols: [
-        { sig: 'compute_metrics(run_data) -> dict', desc: "accuracy/avg_score theo category, parse_failure_rate, call_error_rate, agreement_rate_vs_human=None" },
-        { sig: 'load_and_compute(run_path) -> dict', desc: "đọc 1 file results/*.json rồi compute_metrics()" },
+        { sig: 'list_runs(results_dir="results") -> list[Path]', desc: "liệt kê file run thật, loại trừ *.labels.json" },
+        { sig: 'load_labels(run_path) -> dict', desc: "đọc nhãn người đã chấm cho 1 run" },
+        { sig: 'save_label(run_path, test_case_id, human_verdict, note="")', desc: "lưu 1 nhãn ra file ngay lập tức" },
+        { sig: 'compute_metrics(run_data, labels=None) -> dict', desc: "+ agreement_rate_vs_human, labeled_count khi có labels" },
+        { sig: 'load_and_compute(run_path) -> dict', desc: "đọc run + nhãn đi kèm (nếu có) rồi compute_metrics()" },
       ],
     },
     {
@@ -582,14 +593,31 @@ const REPORT = {
       ],
     },
     {
-      file: "pages/compare_runs.py", status: "stub",
-      role: "TODO Phase 5 — so sánh pairwise A/B giữa 2 run/model.",
-      symbols: [],
+      file: "pages/compare_runs.py", status: "done",
+      role: "So sánh 2 run (không phải 2 model song song trong 1 request).",
+      explain: {
+        role: "So sánh 2 run đã chạy — ví dụ trước/sau khi đổi model, prompt, hoặc test case. Dự án hiện chỉ test 1 model tại 1 thời điểm (DEFAULT_MODEL), nên &quot;so sánh&quot; nghĩa là so 2 lần chạy, không phải 2 model cùng lúc.",
+        how: "Chọn run A (mốc) và run B (mới), hiện bảng tổng quan + theo category cạnh nhau. Bảng theo case so khớp theo test_case_id chung giữa 2 run, phân loại: regression (A pass, B không pass) / improvement (A không pass, B pass) / thay đổi khác / không đổi. Case chỉ tồn tại ở 1 run (test set khác nhau giữa 2 lần chạy) được liệt kê riêng, không tính vào bảng diff.",
+        why: "Phân loại rõ regression vs improvement (không chỉ &quot;khác&quot;) vì đây là thông tin hữu ích nhất — biết thay đổi làm tốt lên/tệ đi ở CASE NÀO cụ thể, không chỉ nhìn 1 số accuracy tổng tăng/giảm mà không biết vì sao.",
+      },
+      symbols: [
+        { sig: 'st.selectbox("Run A"), st.selectbox("Run B")', desc: "chọn 2 run để so sánh" },
+        { sig: '_classify(verdict_a, verdict_b) -> str', desc: "regression / improvement / thay đổi / không đổi" },
+        { sig: 'bảng diff theo case + case chỉ có ở 1 bên', desc: "xử lý khi test set khác nhau giữa 2 run" },
+      ],
     },
     {
-      file: "pages/calibration.py", status: "stub",
-      role: "TODO Phase 5 — chấm human label + agreement rate judge vs human.",
-      symbols: [],
+      file: "pages/calibration.py", status: "done",
+      role: "Chấm nhãn người, lưu file ngay khi chấm, agreement rate thật.",
+      explain: {
+        role: "Trang duy nhất cho phép người chấm nhãn (human label) từng case, so với verdict của judge — số liệu duy nhất trong dự án đến từ con người, không phải model.",
+        how: "Chọn run → chọn case (đánh dấu ✅ nếu đã chấm) → hiện đủ ngữ cảnh (prompt, context, reference, rubric, output, judge verdict+reasoning) → chọn verdict của mình (mặc định = verdict judge) + ghi chú tùy chọn → bấm &quot;💾 Lưu nhãn&quot; gọi save_label() ghi file ngay, rồi st.rerun() để agreement rate cập nhật ngay trên UI.",
+        why: "Lưu ra file ngay sau MỖI lần chấm (không đợi chấm hết) — đúng rủi ro #6 đã lường trước (session_state mất dữ liệu khi refresh). Default verdict = verdict judge để giảm effort click khi đồng ý, nhưng vẫn phải bấm Lưu mới tính là đã chấm — tránh coi &quot;chưa xem&quot; thành &quot;đã đồng ý&quot;.",
+      },
+      symbols: [
+        { sig: 'st.radio("Verdict theo bạn", default=judge_verdict)', desc: "chọn nhãn, mặc định theo judge" },
+        { sig: 'st.button("💾 Lưu nhãn") -> save_label() + st.rerun()', desc: "lưu ngay lập tức, không giữ session_state" },
+      ],
     },
   ],
 
@@ -643,11 +671,19 @@ const REPORT = {
       quote: "streamlit.testing.v1.AppTest — chạy script thật server-side, bắt exception thật, không cần browser",
       conclusion: "Đổi sang dùng AppTest cho cả 3 trang (app.py, run_evaluation.py, results_explorer.py) — verify được cả widget/logic lỗi (sai kwarg, sai key dict...) mà py_compile và curl đều không phát hiện được. Metric hiển thị trong AppTest khớp đúng số liệu run thật (88.9% accuracy...), xác nhận UI đọc đúng dữ liệu, không chỉ \"không crash\".",
     },
+    {
+      title: "File phụ trợ cùng thư mục dữ liệu chính dễ tạo bug ẩn",
+      body: "Khi build Calibration, file nhãn người được đặt là <run_id>.labels.json — nằm CÙNG thư mục results/ với file run, và tên vẫn khớp pattern *.json mà app.py/results_explorer.py dùng để tìm \"run mới nhất\".",
+      quote: "'20260819T150026Z.json' < '20260819T150026Z.labels.json' khi sort alphabet — file nhãn dễ bị coi là entry mới nhất",
+      conclusion: "Phát hiện lúc viết save_label(), trước khi có ai chấm nhãn thật — nếu không lọc, code sẽ crash khi đọc raw[\"results\"] của 1 file không có key này. Fix bằng list_runs() lọc *.labels.json tập trung 1 nơi, mọi trang gọi lại hàm này thay vì tự glob(\"*.json\") riêng — tránh lặp lỗi ở nhiều trang.",
+    },
   ],
 
   roadmap: [
-    { title: "Compare Runs + Calibration", note: "pairwise A/B, human label agreement (Phase 5)" },
-    { title: "README + Deploy", note: "Streamlit Community Cloud, insight thật (Phase 6)" },
+    { title: "README đầy đủ", note: "problem statement, architecture, sample report, screenshot, link demo" },
+    { title: "Deploy", note: "Streamlit Community Cloud — dùng st.secrets, test deploy sớm" },
+    { title: "Kiểm tra git history", note: "không có API key lọt vào commit" },
+    { title: "Insight thật cuối cùng", note: "cho phỏng vấn — parse failure rate, agreement rate thực tế" },
   ],
 };
 

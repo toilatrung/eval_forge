@@ -10,12 +10,12 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from metrics import load_and_compute
+from metrics import list_runs, load_and_compute
 
 st.set_page_config(page_title="Results Explorer — eval_forge", page_icon="🧪", layout="wide")
 st.title("Results Explorer")
 
-run_files = sorted(Path("results").glob("*.json"), reverse=True)
+run_files = list(reversed(list_runs()))
 if not run_files:
     st.info("Chưa có run nào. Sang trang **Run Evaluation** để chạy lần đầu.")
     st.stop()
@@ -33,9 +33,16 @@ c2.metric(
 c3.metric("Parse failure rate", f"{metrics['parse_failure_rate'] * 100:.1f}%")
 c4.metric("Call error rate", f"{metrics['call_error_rate'] * 100:.1f}%")
 
-st.caption(
-    "Agreement rate (judge vs human label): n/a — cần dữ liệu từ trang Calibration (Phase 5)."
-)
+if metrics["agreement_rate_vs_human"] is not None:
+    st.caption(
+        f"Agreement rate (judge vs human label): **{metrics['agreement_rate_vs_human'] * 100:.1f}%** "
+        f"(trên {metrics['labeled_count']} case đã chấm ở trang Calibration)."
+    )
+else:
+    st.caption(
+        "Agreement rate (judge vs human label): n/a — chưa có nhãn nào, sang trang "
+        "**Calibration** để chấm."
+    )
 
 st.subheader("Theo category")
 cat_df = pd.DataFrame(
@@ -70,6 +77,9 @@ case_ids = [r["test_case_id"] for r in filtered]
 if case_ids:
     selected_id = st.selectbox("Xem chi tiết case", case_ids)
     case = next(r for r in filtered if r["test_case_id"] == selected_id)
+    if case.get("prompt"):
+        st.write("**Prompt:**")
+        st.text(case["prompt"])
     st.write("**Model output:**")
     st.text(case.get("model_output") or "(không có output — call_error)")
     st.write("**Rule-based signals:**", case["rule_signals"])

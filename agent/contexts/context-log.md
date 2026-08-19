@@ -192,3 +192,35 @@ Format 1 entry:
   - Các quyết định khác: xem `AGENT.md` §5 (không đổi).
 - **Bước tiếp theo:** `pages/compare_runs.py` (pairwise A/B), `pages/calibration.py` (human
   label + agreement rate) → hoàn tất Phase 5.
+
+---
+
+## Snapshot — Session 10 (2026-08-19)
+- **Phase hiện tại:** **Phase 5 hoàn thành — không còn module nào ở dạng stub.** Chuyển sang
+  **Phase 6 — Đóng gói & Demo** (phase cuối theo kế hoạch).
+- **Đã có:**
+  - Mọi thứ ở Snapshot Session 9, cộng thêm:
+  - `metrics.py`: `list_runs()`, `load_labels()`, `save_label()`, `compute_metrics(labels=...)`
+    — agreement rate thật khi có nhãn người.
+  - `runner.py`: `CaseResult` + `prompt`/`context`/`reference_answer`/`rubric`.
+  - `pages/calibration.py`, `pages/compare_runs.py` — đủ logic thật, verify bằng `AppTest`
+    (click nút Lưu nhãn thật, giả lập run test có regression/improvement).
+  - `app.py`, `pages/results_explorer.py` dùng `list_runs()` (fix bug tiềm ẩn: file
+    `*.labels.json` từng có thể bị nhặt nhầm làm run mới nhất).
+  - `docs/progress-report.md` + `agent/contexts/progress-report.html` đã cập nhật đầy đủ.
+    Artifact đã republish. `agent/taskboard.html`: Phase 5 done, Phase 6 current.
+- **Chưa có / còn thiếu:**
+  - **Chưa có dữ liệu thật** cho Calibration (chưa ai chấm nhãn thật) và Compare Runs (chỉ
+    có 1 run thật trong `results/`, cần ≥2 run mới so sánh được) — cơ chế đã sẵn sàng, chỉ
+    thiếu dữ liệu vì đó là việc dùng UI, không phải việc code.
+  - README.md chưa có mục Sample report/Demo. Chưa deploy Streamlit Community Cloud.
+  - Các thay đổi Session 10 (`metrics.py`, `runner.py`, `app.py`, `pages/*.py`,
+    `taskboard.html`, `agent/contexts/*`, `docs/progress-report.md`) **chưa commit**.
+- **Quyết định cần nhớ:**
+  - `list_runs()` là nơi DUY NHẤT liệt kê file run — mọi trang phải gọi hàm này, không tự
+    `glob("*.json")` riêng, để tránh lặp lại bug nhặt nhầm file `*.labels.json`.
+  - Run cũ (`20260819T150026Z.json`, trước Phase 5) thiếu field `prompt`/`context`/... —
+    Calibration xử lý fallback, không bắt buộc chạy lại.
+  - Các quyết định khác: xem `AGENT.md` §5 (không đổi).
+- **Bước tiếp theo:** Phase 6 — README.md đầy đủ, deploy, kiểm tra git history, insight thật
+  cuối cùng. Đây là phase cuối của dự án theo kế hoạch ban đầu.

@@ -2,8 +2,8 @@
 
 **Dự án:** LLM Evaluation Harness + Internal Platform
 **Ngày báo cáo:** 2026-08-19
-**Phạm vi:** Phase 1 (Nền tảng) → Phase 4 (Platform hóa)
-**Trạng thái tổng thể:** 4/6 phase hoàn thành, đúng tiến độ, chưa phát sinh rủi ro nghiêm trọng.
+**Phạm vi:** Phase 1 (Nền tảng) → Phase 5 (Tính năng nâng cao)
+**Trạng thái tổng thể:** 5/6 phase hoàn thành, đúng tiến độ, chưa phát sinh rủi ro nghiêm trọng.
 
 Repo: `github.com/toilatrung/eval_forge` · Kế hoạch đầy đủ + quyết định thiết kế: [`agent/AGENT.md`](../agent/AGENT.md) · Nhật ký chi tiết từng phiên: [`agent/contexts/session-history.md`](../agent/contexts/session-history.md)
 
@@ -16,12 +16,14 @@ cần eval (OpenAI `gpt-4o-mini`), chấm bằng rule-based evaluator + LLM-as-j
 Claude — khác họ với model test để giảm self-preference bias), rồi xem/so sánh kết quả qua
 dashboard Streamlit.
 
-Tính đến báo cáo này, **toàn bộ pipeline — từ test case, core eval engine (gọi model,
-rule-based evaluator, LLM judge), chạy full test set + tính metrics, đến UI Streamlit chạy
-eval/xem kết quả — đã hoạt động thật**, không chỉ mock, và đã có **1 kết quả run đầy đủ
-18/18 case** xem được trực tiếp trên browser. Trong quá trình test thật, dự án đã phát hiện
-và xử lý 3 lỗi tích hợp thực tế (mục 4) và ghi nhận được insight định lượng đầu tiên đáng đưa
-vào báo cáo cuối (mục 5).
+Tính đến báo cáo này, **toàn bộ kiến trúc ban đầu đã có logic thật** — từ test case, core
+eval engine (gọi model, rule-based evaluator, LLM judge), pipeline + metrics, đến cả 4 trang
+Streamlit (Run Evaluation, Results Explorer, Compare Runs, Calibration) — không còn module
+nào ở dạng stub. Đã có **1 kết quả run đầy đủ 18/18 case** xem được trực tiếp trên browser,
+và cơ chế agreement rate thật (judge vs human) + so sánh pairwise giữa 2 run đã sẵn sàng dùng
+(chưa có dữ liệu thật vì đó là việc dùng UI sau này, không phải việc code). Trong quá trình
+test thật, dự án đã phát hiện và xử lý nhiều lỗi tích hợp thực tế (mục 4) và ghi nhận được
+insight định lượng đáng đưa vào báo cáo cuối (mục 5).
 
 ## 2. Đã hoàn thành
 
@@ -85,6 +87,21 @@ Agreement rate vs human: n/a (chưa có, cần Phase 5).
 không kích hoạt script chạy qua WebSocket nên không phát hiện được lỗi runtime). Đã boot thử
 server thật (`streamlit run app.py --server.headless`) để xác nhận start được, sau đó dùng
 `AppTest` để verify từng trang không lỗi.
+
+### Phase 5 — Tính năng nâng cao
+
+| Module | Nội dung | Verify |
+|---|---|---|
+| `pages/calibration.py` | Chấm human label từng case, lưu file `<run_id>.labels.json` ngay khi bấm "Lưu nhãn" | `AppTest`: click nút "Lưu nhãn" thật → file được tạo đúng nội dung, 0 exception |
+| `pages/compare_runs.py` | So sánh pairwise 2 run: tổng quan, theo category, theo case (regression/improvement) | `AppTest` với 1 run test tạm (giả lập 1 regression + 1 improvement) → nhận diện đúng, sau đó xoá file test |
+| `metrics.py` (mở rộng) | `list_runs()`, `load_labels()`, `save_label()`, `compute_metrics(labels=...)` — agreement rate thật | Test tay: labels giả lập 17/18 khớp judge → `agreement_rate_vs_human = 0.9444` khớp đúng tính tay |
+| `runner.py` (mở rộng) | `CaseResult` lưu thêm `prompt`/`context`/`reference_answer`/`rubric` — cần cho Calibration hiển thị đủ ngữ cảnh | `py_compile` + `AppTest` các trang dùng `runner`/`schemas` |
+
+**Lỗi phát hiện khi build Phase 5:** `list_runs()` phải lọc bỏ file `*.labels.json` — file
+nhãn nằm cùng thư mục `results/` và tên vẫn khớp pattern `*.json`, nếu không lọc thì
+`app.py`/`results_explorer.py` có thể nhặt nhầm file nhãn làm "run mới nhất" (do
+`.labels.json` > `.json` khi sort alphabet) và crash khi đọc `raw["results"]` (file nhãn
+không có key này).
 
 ## 3. Module & code đã triển khai
 
@@ -325,11 +342,72 @@ reasoning — đọc trực tiếp từ JSON thô, không phải bản đã rút
 nhanh) và "xem 1 case" (đọc raw JSON, đầy đủ text dài) — vì nhồi hết prompt/output/reasoning
 (có thể vài trăm từ) vào 1 bảng Pandas sẽ vừa khó đọc vừa dễ vỡ layout.
 
-### Chưa triển khai (stub — chỉ có docstring + TODO)
-| File | Việc cần làm | Phase |
-|---|---|---|
-| `pages/compare_runs.py` | So sánh pairwise A/B | 5 |
-| `pages/calibration.py` | Chấm human label + agreement rate | 5 |
+### `metrics.py` (mở rộng Phase 5) — nhãn người + agreement rate thật
+
+**Vai trò:** Mở rộng để hỗ trợ Calibration — lưu/đọc nhãn người, tính agreement rate thật,
+và liệt kê đúng file run (loại trừ file nhãn khỏi danh sách run).
+
+**Cách hoạt động:** `list_runs()` lọc bỏ `*.labels.json` khi liệt kê run trong `results/`.
+`save_label()` ghi/đè 1 entry vào file `<run_id>.labels.json` **ngay khi gọi** — không giữ
+trong `session_state`. `load_and_compute()` tự động gọi `load_labels()` và truyền vào
+`compute_metrics()`, nên `agreement_rate_vs_human` **tự có số liệu thật** ngay khi Calibration
+lưu ≥1 nhãn — không cần sửa `app.py`/`results_explorer.py` để "biết" về nhãn mới.
+
+**Vì sao thiết kế vậy:** tách trách nhiệm rõ — `pages/calibration.py` chỉ cần gọi
+`save_label()`, còn nơi khác (trang chủ, Results Explorer) hoàn toàn không cần biết nhãn
+lưu ở đâu/định dạng gì, chỉ gọi lại `load_and_compute()` như cũ.
+
+### `runner.py` (mở rộng Phase 5) — lưu thêm ngữ cảnh gốc mỗi case
+
+**Vai trò:** `CaseResult` giờ lưu thêm `prompt`/`context`/`reference_answer`/`rubric` của mỗi
+case — trước đây (Phase 3) chỉ lưu output/verdict, thiếu ngữ cảnh gốc.
+
+**Cách hoạt động:** `_base_fields(tc)` trả field chung để tránh lặp code ở cả 4 nhánh return
+của `run_test_case()` (ok / call_error trước judge / judge_parse_failure / call_error sau
+judge).
+
+**Vì sao thiết kế vậy:** phát hiện khi build `pages/calibration.py` — người chấm cần thấy
+prompt gốc + reference/rubric mới chấm được công bằng, không thể chỉ nhìn output trần trụi.
+Run cũ (`20260819T150026Z.json`, chạy ở Phase 3, trước khi có field này) sẽ thiếu — trang
+Calibration xử lý fallback: hiện thông báo "chạy run mới để có đầy đủ ngữ cảnh" thay vì lỗi.
+
+### `pages/calibration.py` — chấm nhãn người, agreement rate thật
+
+**Vai trò:** Trang duy nhất cho phép người chấm nhãn (human label) từng case, so với verdict
+của judge — đây là số liệu duy nhất trong dự án đến từ con người, không phải model nào cả.
+
+**Cách hoạt động:** chọn run → chọn case (đánh dấu ✅ nếu đã chấm) → hiện đủ ngữ cảnh (prompt,
+context, reference, rubric, output, judge verdict + reasoning) → người chấm chọn verdict của
+mình (mặc định = verdict của judge, để chỉnh khi không đồng ý) + ghi chú tùy chọn → bấm
+"💾 Lưu nhãn" gọi `save_label()` ghi ra file ngay lập tức, rồi `st.rerun()` để agreement rate
+cập nhật ngay trên UI.
+
+**Vì sao thiết kế vậy:** lưu ra file ngay sau **mỗi lần chấm** (không đợi chấm hết mới lưu 1
+lần) — đúng rủi ro #6 đã lường trước (`session_state` mất dữ liệu khi Streamlit refresh).
+Default verdict = verdict của judge (không để trống) để giảm effort click cho case người
+chấm đồng ý, nhưng vẫn phải bấm "Lưu" mới tính là đã chấm — tránh coi "chưa xem" thành "đã
+đồng ý".
+
+### `pages/compare_runs.py` — so sánh 2 run, không phải 2 model song song
+
+**Vai trò:** So sánh 2 **run** đã chạy (ví dụ trước/sau khi đổi model, đổi prompt, đổi test
+case) — không phải chạy song song 2 model trong cùng 1 request, vì dự án hiện tại chỉ test
+1 model tại 1 thời điểm (`DEFAULT_MODEL` trong `llm_client.py`).
+
+**Cách hoạt động:** chọn run A (mốc so sánh) và run B (run mới), hiện bảng tổng quan + theo
+category cạnh nhau, và bảng theo case với nhãn: `regression` (A pass, B không pass),
+`improvement` (A không pass, B pass), `thay đổi` (khác nhưng không qua/rời khỏi pass), hoặc
+`không đổi` — so khớp theo `test_case_id` chung giữa 2 run, xử lý cả trường hợp 2 run có test
+set khác nhau (case chỉ tồn tại ở 1 bên, hiển thị riêng, không tính vào bảng diff).
+
+**Vì sao thiết kế vậy:** phân loại rõ regression vs improvement (không chỉ "khác") vì đây là
+thông tin hữu ích nhất khi so sánh 2 run — biết thay đổi làm tốt lên hay tệ đi ở **case nào
+cụ thể**, không chỉ nhìn 1 con số accuracy tổng tăng/giảm mà không biết vì sao.
+
+### Chưa triển khai
+Không còn file nào ở dạng stub — tất cả module trong kiến trúc ban đầu (`agent/AGENT.md`
+§3) đã có logic thật. Còn lại là hoàn thiện `README.md` (mục Sample report/Demo) và deploy
+— việc của **Phase 6**.
 
 ## 4. Vấn đề gặp phải & cách xử lý
 
@@ -368,16 +446,27 @@ thật của cả test set, không phải case đơn lẻ: **overall accuracy 88
 trên toàn bộ 18 case × 2 API (model test + judge) = 36 lệnh gọi thật. Đây là số liệu định
 lượng đầu tiên của dự án, không phải ước lượng.
 
+Khi build Phase 5, phát hiện 1 lỗi tiềm ẩn trước khi nó gây hại thật: file nhãn người
+(`<run_id>.labels.json`) nằm cùng thư mục `results/` với file run, và tên vẫn khớp pattern
+`*.json` mà `app.py`/`results_explorer.py` dùng để tìm "run mới nhất". Vì `.labels.json` >
+`.json` khi sort theo alphabet, file nhãn có thể bị nhặt nhầm làm run và crash khi code cố
+đọc `raw["results"]` (file nhãn không có key này). Phát hiện lúc viết `save_label()` — trước
+khi từng có ai chấm nhãn thật nào, nên chưa từng gây lỗi thực tế cho user, nhưng đáng lưu lại
+làm ví dụ về "convention đặt tên file phụ trợ cùng thư mục dữ liệu chính dễ tạo bug ẩn".
+
 ## 6. Trạng thái hiện tại & bước tiếp theo
 
-- **Hiện tại:** Phase 1–4 hoàn thành toàn bộ task cốt lõi. UI Streamlit chạy được thật (đã
-  smoke-test bằng `AppTest`, 0 exception) — có thể chạy eval và xem kết quả hoàn toàn từ
-  browser, không cần terminal.
-- **Tiếp theo — Phase 5 (Tính năng nâng cao):**
-  - Trang **Compare Runs** — so sánh pairwise A/B giữa 2 run/model.
-  - Trang **Calibration** — chấm human label, lưu ra file JSON ngay sau mỗi lần chấm (không
-    chỉ giữ `session_state`), tính agreement rate judge vs human.
-- **Còn lại sau Phase 5:** Phase 6 (README đầy đủ + deploy + insight thật cho phỏng vấn).
+- **Hiện tại:** Phase 1–5 hoàn thành toàn bộ task cốt lõi. Toàn bộ 4 trang Streamlit (Run
+  Evaluation, Results Explorer, Compare Runs, Calibration) đã có logic thật, verify bằng
+  `AppTest`. Cơ chế agreement rate thật + so sánh pairwise đã sẵn sàng — **chưa có dữ liệu
+  thật** (chưa ai chấm nhãn thật, chưa có run thứ 2 để so sánh thật) vì đó là việc dùng UI,
+  không phải việc code.
+- **Tiếp theo — Phase 6 (Đóng gói & Demo):**
+  - README.md: problem statement → architecture → sample report → screenshot → link demo.
+  - Deploy Streamlit Community Cloud (dùng `st.secrets` thay `.env`, test deploy sớm).
+  - Kiểm tra lại git history không có API key.
+  - Ghi lại insight thật cuối cùng cho phỏng vấn.
+- **Còn lại sau Phase 6:** Không còn — đây là phase cuối theo kế hoạch ban đầu.
 
 ## 7. Phụ lục — trạng thái file
 
@@ -388,9 +477,10 @@ lượng đầu tiên của dự án, không phải ước lượng.
 ✅ llm_client.py                   — gọi OpenAI, retry/backoff
 ✅ evaluator.py                    — rule-based signal
 ✅ llm_judge.py                    — Claude judge, xử lý parse failure
-✅ runner.py, metrics.py, report.py       — pipeline hoàn chỉnh, đã chạy full 18 case thật
+✅ runner.py, metrics.py, report.py       — pipeline hoàn chỉnh + nhãn người + agreement rate
 ✅ app.py, pages/run_evaluation.py,
-   pages/results_explorer.py              — UI chạy eval + xem kết quả, verify bằng AppTest
-⬜ pages/compare_runs.py, calibration.py  — Phase 5
+   pages/results_explorer.py,
+   pages/compare_runs.py, calibration.py  — toàn bộ UI, verify bằng AppTest
 ⬜ README.md mục Sample report/Demo       — Phase 6
+⬜ Deploy Streamlit Community Cloud       — Phase 6
 ```

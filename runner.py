@@ -32,6 +32,12 @@ class CaseResult:
     category: str
     difficulty: str
     status: str  # "ok" | "judge_parse_failure" | "call_error"
+    # Ngữ cảnh gốc của case — lưu lại để trang Calibration (Phase 5) hiển thị đủ thông tin
+    # cho người chấm, không chỉ output trần trụi.
+    prompt: str = ""
+    context: str | None = None
+    reference_answer: str | None = None
+    rubric: list[str] = field(default_factory=list)
     model_output: str | None = None
     rule_signals: dict = field(default_factory=dict)
     empty_output: bool | None = None
@@ -39,6 +45,20 @@ class CaseResult:
     judge_score: int | None = None
     judge_reasoning: str | None = None
     error: str | None = None
+
+
+def _base_fields(tc: TestCase) -> dict:
+    """Field chung cho mọi `CaseResult` của 1 test case, tránh lặp ở 4 nhánh return."""
+
+    return {
+        "test_case_id": tc.id,
+        "category": tc.category,
+        "difficulty": tc.difficulty,
+        "prompt": tc.prompt,
+        "context": tc.context,
+        "reference_answer": tc.reference_answer,
+        "rubric": tc.rubric,
+    }
 
 
 def run_test_case(tc: TestCase) -> CaseResult:
@@ -51,25 +71,19 @@ def run_test_case(tc: TestCase) -> CaseResult:
       vẫn giữ output + rule signal.
     """
 
+    base = _base_fields(tc)
+
     try:
         output = call_model(tc.prompt, context=tc.context)
     except LLMClientError as exc:
-        return CaseResult(
-            test_case_id=tc.id,
-            category=tc.category,
-            difficulty=tc.difficulty,
-            status="call_error",
-            error=f"llm_client: {exc}",
-        )
+        return CaseResult(**base, status="call_error", error=f"llm_client: {exc}")
 
     ev = evaluate(tc, output)
 
     try:
         verdict = judge(tc, output)
         return CaseResult(
-            test_case_id=tc.id,
-            category=tc.category,
-            difficulty=tc.difficulty,
+            **base,
             status="ok",
             model_output=output,
             rule_signals=ev.signals,
@@ -80,9 +94,7 @@ def run_test_case(tc: TestCase) -> CaseResult:
         )
     except JudgeParseError as exc:
         return CaseResult(
-            test_case_id=tc.id,
-            category=tc.category,
-            difficulty=tc.difficulty,
+            **base,
             status="judge_parse_failure",
             model_output=output,
             rule_signals=ev.signals,
@@ -91,9 +103,7 @@ def run_test_case(tc: TestCase) -> CaseResult:
         )
     except JudgeCallError as exc:
         return CaseResult(
-            test_case_id=tc.id,
-            category=tc.category,
-            difficulty=tc.difficulty,
+            **base,
             status="call_error",
             model_output=output,
             rule_signals=ev.signals,
