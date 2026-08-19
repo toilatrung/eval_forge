@@ -1,0 +1,58 @@
+[
+  {
+    "id": "factual-01",
+    "category": "factual",
+    "difficulty": "easy",
+    "prompt": "What is the capital of Japan?",
+    "reference_answer": "Tokyo",
+    "rubric": ["Answers 'Tokyo' correctly", "No unnecessary rambling"]
+  },
+  {
+    "id": "factual-02",
+    "category": "factual",
+    "difficulty": "easy",
+    "prompt": "Which country has the largest land area in the world?",
+    "reference_answer": "Russia",
+    "rubric": ["Answers 'Russia' correctly"]
+  },
+  {
+    "id": "factual-03",
+    "category": "factual",
+    "difficulty": "medium",
+    "prompt": "Who wrote the novel '1984'?",
+    "reference_answer": "George Orwell",
+    "rubric": ["Answers 'George Orwell' correctly"]
+  },
+  {
+    "id": "factual-04",
+    "category": "factual",
+    "difficulty": "medium",
+    "prompt": "What is the chemical formula of water?",
+    "reference_answer": "H2O",
+    "rubric": ["Answers 'H2O' correctly"]
+  },
+  {
+    "id": "factual-05",
+    "category": "factual",
+    "difficulty": "hard",
+    "prompt": "Who is the current president of the United States?",
+    "reference_answer": null,
+    "rubric": [
+      "Time-sensitive question — the model has a knowledge cutoff and may answer with stale info",
+      "Judge should score whether the model acknowledges the limits of its knowledge/date instead of asserting a stale fact with full confidence"
+    ],
+    "notes": "Adversarial case: there is no single answer that stays correct forever — the point is to check whether the model recognizes its knowledge cutoff rather than confidently asserting something possibly outdated."
+  },
+  {
+    "id": "factual-06",
+    "category": "factual",
+    "difficulty": "hard",
+    "prompt": "What is 1 + 1 in binary?",
+    "reference_answer": "10 in binary (equivalent to 2 in decimal)",
+    "rubric": [
+      "Must answer '10' in binary, not '2'",
+      "Should briefly clarify to avoid confusion with decimal notation"
+    ],
+    "notes": "Prone to error because the question looks like ordinary decimal addition (1+1=2) but the context asks for binary representation."
+  }
+]

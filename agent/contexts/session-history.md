@@ -84,3 +84,48 @@ Format 1 entry:
   chưa yêu cầu commit).
 - **Việc còn lại / next:** Hỏi/chờ user xác nhận commit + push README (và commit amend
   identity fix) lên `origin/main`. Sau đó tiếp tục Phase 1: schema Pydantic + 15–20 test case.
+
+## Session 4 — 2026-08-19
+- **Mục tiêu phiên:** Hoàn thiện nốt Phase 1 — schema Pydantic + viết test case + verify.
+- **Việc đã làm:**
+  - Ghi nhận: user đã tự commit README (`git commit -m "docs: add README with project
+    overview, teckstack, and roadmap"`, commit `e9dbb79`) từ trước phiên này.
+  - Tạo `schemas.py`: model `TestCase` (Pydantic v2 — id, category, difficulty, prompt,
+    context, reference_answer, rubric, notes) + `load_test_cases()` — loader không throw
+    khi 1 file lỗi, gom lỗi vào `LoadResult.errors` (cùng nguyên tắc với `llm_judge.py`
+    Phase 2: không crash toàn run vì 1 lỗi nhỏ), kèm check id trùng lặp.
+  - Viết 18 test case bằng **tiếng Anh** (theo yêu cầu user, đổi từ dự thảo tiếng Việt ban
+    đầu): `test_cases/factual.json` (6), `test_cases/rag.json` (6), `test_cases/safety.json`
+    (6) — mỗi category có 2 case `hard`/adversarial (time-sensitive fact, binary trick,
+    unanswerable-from-context, conflicting context, jailbreak roleplay, innocuous-framing
+    harmful request) + 1 case over-refusal test (`safety-03`, `safety-04`).
+  - Xóa `test_cases/.gitkeep` (không cần nữa vì đã có file thật).
+  - Verify: `python3 schemas.py` → load 18/18 case, 0 lỗi. Test riêng đường lỗi bằng file
+    JSON hỏng chèn tạm ở `/tmp` → loader vẫn load đúng 18 case hợp lệ + báo 1 lỗi riêng,
+    không crash.
+  - Cập nhật `agent/taskboard.html`: bỏ cờ `current` ở Phase 1 (đã done), gắn `current` cho
+    Phase 2.
+- **Quyết định đưa ra:**
+  - Test case viết bằng tiếng Anh (không phải tiếng Việt như bản thảo đầu) — yêu cầu rõ từ
+    user.
+  - Schema đặt ở file `schemas.py` tại root (không phải trong `test_cases/`) vì sẽ được
+    `evaluator.py`, `llm_judge.py`, `runner.py` (Phase 2–3) dùng chung.
+- **Trạng thái:** done — **Phase 1 hoàn thành toàn bộ task cốt lõi**.
+- **Việc còn lại / next:** Bắt đầu **Phase 2 — Core eval engine**: `llm_client.py` (gọi
+  OpenAI, retry/backoff), `evaluator.py` (rule-based), `llm_judge.py` (Claude judge, ép
+  JSON output ổn định — phần dễ tốn thời gian nhất). Cần `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`
+  thật trong `.env` để test gọi API thật (hiện chưa có).
+
+## Session 5 — 2026-08-19
+- **Mục tiêu phiên:** Cho phép đổi base URL của model qua `.env` (phục vụ proxy/gateway
+  nội bộ/API tương thích, ví dụ khi không gọi trực tiếp OpenAI/Anthropic endpoint chính chủ).
+- **Việc đã làm:**
+  - Thêm `OPENAI_BASE_URL` và `ANTHROPIC_BASE_URL` vào `.env.example` (để trống = dùng
+    endpoint mặc định của SDK).
+  - Ghi TODO vào `llm_client.py` và `llm_judge.py`: khi implement thật (Phase 2), đọc 2 biến
+    này và chỉ truyền `base_url` cho SDK client khi có giá trị — chưa code logic thật vì
+    Phase 2 chưa bắt đầu.
+- **Quyết định đưa ra:** base_url là optional, mặc định rỗng → dùng endpoint chính chủ của
+  SDK; không bắt buộc set.
+- **Trạng thái:** done
+- **Việc còn lại / next:** Không đổi — vẫn là bắt đầu Phase 2 (xem next của Session 4).

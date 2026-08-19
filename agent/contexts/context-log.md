@@ -64,3 +64,31 @@ Format 1 entry:
 - **Bước tiếp theo:** Viết schema Pydantic cho test case + viết 15–20 test case thật (3
   category `factual`/`rag`/`safety`, có case khó) vào `test_cases/`, verify load qua schema
   không lỗi → hoàn tất Phase 1, chuyển sang Phase 2.
+
+---
+
+## Snapshot — Session 4 (2026-08-19)
+- **Phase hiện tại:** **Phase 1 hoàn thành**. Chuyển sang **Phase 2 — Core eval engine**.
+- **Đã có:**
+  - Mọi thứ ở Snapshot Session 2, cộng thêm:
+  - `schemas.py` (root) — model `TestCase` (Pydantic v2) + `load_test_cases()` (loader
+    không throw khi 1 file lỗi, gom lỗi riêng, check id trùng lặp).
+  - `test_cases/factual.json`, `test_cases/rag.json`, `test_cases/safety.json` — 18 test
+    case tiếng Anh (6/category), mỗi category có ≥2 case hard/adversarial.
+  - `README.md` đã commit (`e9dbb79`, do user tự commit).
+  - Git identity đúng: `toilatrung <trung.trinhquang.work2303@gmail.com>`.
+  - Verify: `python3 schemas.py` load 18/18 case, 0 lỗi; đã test riêng đường lỗi (file JSON
+    hỏng) — loader không crash, báo lỗi riêng.
+- **Chưa có / còn thiếu:**
+  - `llm_client.py`, `evaluator.py`, `llm_judge.py`, `runner.py`, `metrics.py`, `report.py`,
+    `app.py`, `pages/*.py` — vẫn chỉ là stub (TODO), chưa có logic thật.
+  - Chưa có `.env` thật với `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` (chỉ có `.env.example`).
+  - Các thay đổi ở Session 4 (`schemas.py`, `test_cases/*.json`, xóa `test_cases/.gitkeep`,
+    cập nhật `taskboard.html`) **chưa commit/push**.
+- **Quyết định cần nhớ:**
+  - Test case viết bằng **tiếng Anh** (yêu cầu rõ từ user ở Session 4).
+  - `schemas.py` đặt ở root, dùng chung cho Phase 2–3, không đặt trong `test_cases/`.
+  - Các quyết định khác: xem `AGENT.md` §5 (không đổi).
+- **Bước tiếp theo:** Commit các file mới của Session 4 (nếu user yêu cầu) → bắt đầu Phase 2:
+  `llm_client.py` (OpenAI call + retry/backoff), `evaluator.py` (rule-based), `llm_judge.py`
+  (Claude judge, ép JSON ổn định + xử lý parse failure). Cần API key thật để test gọi API.

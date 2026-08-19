@@ -1,0 +1,68 @@
+[
+  {
+    "id": "rag-01",
+    "category": "rag",
+    "difficulty": "easy",
+    "context": "Our return policy: items purchased online can be returned within 30 days of delivery for a full refund, as long as the item is unused and in its original packaging.",
+    "prompt": "How many days do I have to return an item?",
+    "reference_answer": "30 days from delivery",
+    "rubric": ["Answer must come from the given context", "States '30 days'"]
+  },
+  {
+    "id": "rag-02",
+    "category": "rag",
+    "difficulty": "easy",
+    "context": "Marie Curie was born on 7 November 1867 in Warsaw, Poland. She won the Nobel Prize in Physics in 1903 and the Nobel Prize in Chemistry in 1911.",
+    "prompt": "In what year was Marie Curie born?",
+    "reference_answer": "1867",
+    "rubric": ["Answer must come from the given context", "States '1867'"]
+  },
+  {
+    "id": "rag-03",
+    "category": "rag",
+    "difficulty": "medium",
+    "context": "Server maintenance window: every Sunday from 02:00 to 04:00 UTC, the API may return 503 errors. Average latency during normal hours is 120ms.",
+    "prompt": "What is the average latency outside the maintenance window?",
+    "reference_answer": "120ms",
+    "rubric": ["Extracts the numeric value '120ms' correctly from context", "Does not confuse it with the maintenance window time"]
+  },
+  {
+    "id": "rag-04",
+    "category": "rag",
+    "difficulty": "medium",
+    "context": "The company was founded in 2015 by two engineers. It launched its first product in 2017 and reached 1 million users in 2020.",
+    "prompt": "How many employees does the company have today?",
+    "reference_answer": "Not stated in the context",
+    "rubric": [
+      "Context does not mention employee count — model should say the information is not available rather than guessing",
+      "Penalize any fabricated employee number"
+    ],
+    "notes": "Tests over-claiming: a related but unanswered sub-question hidden inside a context that looks informative."
+  },
+  {
+    "id": "rag-05",
+    "category": "rag",
+    "difficulty": "hard",
+    "context": "The product warranty covers manufacturing defects for 12 months. It does not cover accidental damage, water damage, or unauthorized repairs.",
+    "prompt": "Does the warranty cover a cracked screen caused by dropping the device?",
+    "reference_answer": "No — that is accidental damage, which is explicitly excluded",
+    "rubric": [
+      "Requires combining two facts in the context (warranty scope + exclusions) rather than a single direct lookup",
+      "Must not hallucinate an exception not present in the context"
+    ],
+    "notes": "Unanswerable-by-direct-quote case — the correct answer requires inference from an exclusion clause, a common RAG failure mode (models sometimes ignore exclusions)."
+  },
+  {
+    "id": "rag-06",
+    "category": "rag",
+    "difficulty": "hard",
+    "context": "Section A (v1, published Jan): The office is open from 9am to 5pm on weekdays. Section B (v2, published later, supersedes Section A): The office is now open from 8am to 6pm on weekdays.",
+    "prompt": "What time does the office open on weekdays?",
+    "reference_answer": "8am (per the newer section that supersedes the older one)",
+    "rubric": [
+      "Context contains conflicting information from two versions — model must recognize the newer/superseding section",
+      "Penalize an answer that just repeats the first sentence found without resolving the conflict"
+    ],
+    "notes": "Adversarial case: conflicting context. Tests whether the model blindly quotes the first match or reasons about which source is authoritative."
+  }
+]
