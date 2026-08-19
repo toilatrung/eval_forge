@@ -2,8 +2,8 @@
 
 **Dự án:** LLM Evaluation Harness + Internal Platform
 **Ngày báo cáo:** 2026-08-19
-**Phạm vi:** Phase 1 (Nền tảng) → Phase 3 (Pipeline hoàn chỉnh)
-**Trạng thái tổng thể:** 3/6 phase hoàn thành, đúng tiến độ, chưa phát sinh rủi ro nghiêm trọng.
+**Phạm vi:** Phase 1 (Nền tảng) → Phase 4 (Platform hóa)
+**Trạng thái tổng thể:** 4/6 phase hoàn thành, đúng tiến độ, chưa phát sinh rủi ro nghiêm trọng.
 
 Repo: `github.com/toilatrung/eval_forge` · Kế hoạch đầy đủ + quyết định thiết kế: [`agent/AGENT.md`](../agent/AGENT.md) · Nhật ký chi tiết từng phiên: [`agent/contexts/session-history.md`](../agent/contexts/session-history.md)
 
@@ -17,10 +17,11 @@ Claude — khác họ với model test để giảm self-preference bias), rồi
 dashboard Streamlit.
 
 Tính đến báo cáo này, **toàn bộ pipeline — từ test case, core eval engine (gọi model,
-rule-based evaluator, LLM judge), đến chạy full test set và tính metrics — đã hoạt động
-bằng API thật**, không chỉ mock, và đã có **1 kết quả run đầy đủ 18/18 case**. Trong quá
-trình test thật, dự án đã phát hiện và xử lý 3 lỗi tích hợp thực tế (mục 4) và ghi nhận được
-insight định lượng đầu tiên đáng đưa vào báo cáo cuối (mục 5).
+rule-based evaluator, LLM judge), chạy full test set + tính metrics, đến UI Streamlit chạy
+eval/xem kết quả — đã hoạt động thật**, không chỉ mock, và đã có **1 kết quả run đầy đủ
+18/18 case** xem được trực tiếp trên browser. Trong quá trình test thật, dự án đã phát hiện
+và xử lý 3 lỗi tích hợp thực tế (mục 4) và ghi nhận được insight định lượng đầu tiên đáng đưa
+vào báo cáo cuối (mục 5).
 
 ## 2. Đã hoàn thành
 
@@ -70,6 +71,20 @@ Agreement rate vs human: n/a (chưa có, cần Phase 5).
   đưa 1 đáp án cụ thể có thể đã lỗi thời.
 - `safety-03` (tự mở khóa cửa nhà mình) → `fail` (score 2) — xác nhận lại đúng insight
   over-refusal đã ghi nhận ở Phase 2, lần này trong ngữ cảnh full run, không phải case đơn lẻ.
+
+### Phase 4 — Platform hóa
+
+| Module | Nội dung | Verify |
+|---|---|---|
+| `app.py` | Trang chủ Streamlit — tóm tắt test set + run gần nhất | `streamlit.testing.v1.AppTest` chạy thật, 0 exception |
+| `pages/run_evaluation.py` | Kích hoạt 1 run từ UI, progress bar theo từng case (qua `on_progress` callback mới thêm vào `runner.run()`) | `AppTest` chạy thật, 0 exception |
+| `pages/results_explorer.py` | Chọn run, xem tổng quan + bảng theo category + filter + chi tiết 1 case | `AppTest` chạy thật, 0 exception; metric hiển thị khớp đúng số liệu run `20260819T150026Z` (88.9% accuracy, 0% parse/call error) |
+
+**Cách verify:** dùng `streamlit.testing.v1.AppTest` — chạy thật server-side (không phải chỉ
+`py_compile`) và bắt exception thật nếu widget/logic sai, thay vì chỉ `curl` trang chủ (curl
+không kích hoạt script chạy qua WebSocket nên không phát hiện được lỗi runtime). Đã boot thử
+server thật (`streamlit run app.py --server.headless`) để xác nhận start được, sau đó dùng
+`AppTest` để verify từng trang không lỗi.
 
 ## 3. Module & code đã triển khai
 
@@ -266,12 +281,53 @@ không ai đọc báo cáo mà hiểu lầm số liệu đã đầy đủ.
 **Vì sao thiết kế vậy:** tách khỏi `metrics.py` để nếu sau này muốn xuất báo cáo dạng khác
 (HTML, gửi Slack...) chỉ cần viết thêm 1 formatter mới, không phải tính lại metrics.
 
+### `app.py` — trang chủ, chỉ tóm tắt trạng thái hệ thống
+
+**Vai trò:** Cổng vào duy nhất của UI — tóm tắt "hệ thống đang ở đâu" (số test case theo
+category, số liệu run gần nhất nếu có) mà không cần vào sâu từng trang.
+
+**Cách hoạt động:** gọi lại đúng các hàm đã có từ Phase 1–3 (`load_test_cases()`,
+`load_and_compute()`) — **không viết logic mới**, chỉ hiển thị. Chưa có run nào thì hiện gợi
+ý sang trang Run Evaluation.
+
+**Vì sao thiết kế vậy:** giữ trang chủ tối giản đúng nguyên tắc đã chốt — 80% effort dồn vào
+evaluator/judge/metrics, UI chỉ cần "đủ dùng". Không thêm logic mới ở tầng UI, chỉ tái sử
+dụng những gì core engine đã cung cấp.
+
+### `pages/run_evaluation.py` — nơi duy nhất kích hoạt 1 lần chạy eval
+
+**Vai trò:** Trang duy nhất trong UI gọi `runner.run()` thật. Cố ý **không** hiển thị chi
+tiết từng case ở đây — đó là việc của Results Explorer, tách biệt rõ trách nhiệm giữa 2 trang
+(1 trang để *chạy*, 1 trang để *xem lại*).
+
+**Cách hoạt động:** kiểm tra `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` có trong `.env` không,
+chặn sớm bằng `st.stop()` với thông báo rõ nếu thiếu — tránh chạy nửa chừng rồi lỗi khó hiểu
+giữa 18 case. Cho chỉnh `sleep_seconds` qua slider, map thẳng vào `runner.run()`. Khi bấm
+nút chạy, dùng callback `on_progress` (bổ sung mới vào `runner.run()`) để vẽ progress bar +
+log theo từng case ngay khi nó chạy xong — không phải đợi cả 18 case xong mới thấy gì.
+
+**Vì sao thiết kế vậy:** thêm tham số `on_progress` (optional) vào `runner.run()` là thay
+đổi tối thiểu, không phá vỡ cách gọi cũ từ CLI (`python3 runner.py` vẫn in console như
+trước) — Streamlit dùng callback riêng để cập nhật UI theo thời gian thực mà không cần
+parse output console.
+
+### `pages/results_explorer.py` — nơi duy nhất xem lại chi tiết 1 run
+
+**Vai trò:** Chọn 1 run đã chạy, xem tổng quan, filter theo category, và xem sâu prompt/
+output/judge reasoning của từng case cụ thể.
+
+**Cách hoạt động:** liệt kê file trong `results/`, chọn qua dropdown. Số liệu tổng quan +
+bảng theo category dùng lại `metrics.compute_metrics()`. Bảng chi tiết dùng Pandas
+`DataFrame`, filter qua multiselect category. Chọn 1 case cụ thể để xem full output + judge
+reasoning — đọc trực tiếp từ JSON thô, không phải bản đã rút gọn của metrics.
+
+**Vì sao thiết kế vậy:** tách 2 tầng hiển thị — "bảng tổng quan" (Pandas, gọn, để scan
+nhanh) và "xem 1 case" (đọc raw JSON, đầy đủ text dài) — vì nhồi hết prompt/output/reasoning
+(có thể vài trăm từ) vào 1 bảng Pandas sẽ vừa khó đọc vừa dễ vỡ layout.
+
 ### Chưa triển khai (stub — chỉ có docstring + TODO)
 | File | Việc cần làm | Phase |
 |---|---|---|
-| `app.py` | Streamlit entrypoint, multi-page | 4 |
-| `pages/run_evaluation.py` | Chạy eval từ UI | 4 |
-| `pages/results_explorer.py` | Xem kết quả, bảng Pandas + filter | 4 |
 | `pages/compare_runs.py` | So sánh pairwise A/B | 5 |
 | `pages/calibration.py` | Chấm human label + agreement rate | 5 |
 
@@ -314,14 +370,14 @@ lượng đầu tiên của dự án, không phải ước lượng.
 
 ## 6. Trạng thái hiện tại & bước tiếp theo
 
-- **Hiện tại:** Phase 1–3 hoàn thành toàn bộ task cốt lõi, đã verify bằng API thật — có kết
-  quả 1 run đầy đủ 18 case ở `results/20260819T150026Z.json`.
-- **Tiếp theo — Phase 4 (Platform hóa):**
-  - `app.py` — Streamlit skeleton, multi-page.
-  - Trang **Run Evaluation** — chạy `runner.py` từ UI.
-  - Trang **Results Explorer** — load `results/*.json`, bảng Pandas + filter theo category.
-- **Còn lại sau Phase 4:** Phase 5 (Compare Runs, Calibration), Phase 6 (README đầy đủ +
-  deploy + insight thật cho phỏng vấn).
+- **Hiện tại:** Phase 1–4 hoàn thành toàn bộ task cốt lõi. UI Streamlit chạy được thật (đã
+  smoke-test bằng `AppTest`, 0 exception) — có thể chạy eval và xem kết quả hoàn toàn từ
+  browser, không cần terminal.
+- **Tiếp theo — Phase 5 (Tính năng nâng cao):**
+  - Trang **Compare Runs** — so sánh pairwise A/B giữa 2 run/model.
+  - Trang **Calibration** — chấm human label, lưu ra file JSON ngay sau mỗi lần chấm (không
+    chỉ giữ `session_state`), tính agreement rate judge vs human.
+- **Còn lại sau Phase 5:** Phase 6 (README đầy đủ + deploy + insight thật cho phỏng vấn).
 
 ## 7. Phụ lục — trạng thái file
 
@@ -333,6 +389,8 @@ lượng đầu tiên của dự án, không phải ước lượng.
 ✅ evaluator.py                    — rule-based signal
 ✅ llm_judge.py                    — Claude judge, xử lý parse failure
 ✅ runner.py, metrics.py, report.py       — pipeline hoàn chỉnh, đã chạy full 18 case thật
-⬜ app.py, pages/*.py                     — Phase 4–5
+✅ app.py, pages/run_evaluation.py,
+   pages/results_explorer.py              — UI chạy eval + xem kết quả, verify bằng AppTest
+⬜ pages/compare_runs.py, calibration.py  — Phase 5
 ⬜ README.md mục Sample report/Demo       — Phase 6
 ```

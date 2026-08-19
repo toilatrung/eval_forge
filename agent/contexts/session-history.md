@@ -248,3 +248,42 @@ Format 1 entry:
 - **Việc còn lại / next:** Bắt đầu **Phase 4 — Platform hóa**: `app.py` (Streamlit skeleton,
   multi-page), trang **Run Evaluation** (chạy `runner.py` từ UI), trang **Results Explorer**
   (load `results/*.json`, bảng Pandas + filter theo category).
+
+## Session 9 — 2026-08-19
+- **Mục tiêu phiên:** Triển khai Phase 4 — `app.py`, trang Run Evaluation, trang Results
+  Explorer; verify UI chạy thật không chỉ syntax check.
+- **Việc đã làm:**
+  - Thêm tham số optional `on_progress: Callable[[int, int, CaseResult], None]` vào
+    `runner.run()` — gọi sau mỗi case, để UI vẽ progress bar real-time mà không cần parse
+    output console. Không đổi hành vi khi gọi từ CLI (không truyền `on_progress`).
+  - `app.py`: trang chủ tóm tắt test set (theo category) + số liệu run gần nhất (tái sử dụng
+    `load_test_cases()`, `load_and_compute()` — không viết logic mới).
+  - `pages/run_evaluation.py`: check API key trước (chặn sớm bằng `st.stop()` nếu thiếu),
+    slider chỉnh `sleep_seconds`, nút chạy dùng `on_progress` để vẽ progress bar + log box
+    theo từng case, hiện metric tóm tắt khi xong.
+  - `pages/results_explorer.py`: chọn run qua dropdown, bảng tổng quan theo category
+    (Pandas), filter theo category (multiselect), chọn 1 case cụ thể để xem full output +
+    judge reasoning (đọc raw JSON, không phải bản rút gọn của metrics).
+  - **Verify thật, không chỉ `py_compile`:** cài `streamlit==1.39.0`, `pandas==2.2.3` (khớp
+    `requirements.txt`). Boot thử server thật (`streamlit run app.py --server.headless`) —
+    nhận ra `curl` trang chủ trả 200 **không chứng minh script chạy đúng** (Streamlit thực
+    thi qua WebSocket khi client thật kết nối, curl không kích hoạt được). Đổi sang dùng
+    `streamlit.testing.v1.AppTest` — chạy thật cả 3 file (`app.py`,
+    `pages/run_evaluation.py`, `pages/results_explorer.py`) server-side, kiểm tra
+    `at.exception` — **cả 3 đều 0 exception**, và giá trị metric hiển thị khớp đúng số liệu
+    run thật ở Phase 3 (88.9% accuracy, 0% parse/call error) — xác nhận UI đọc đúng dữ liệu,
+    không chỉ "không crash".
+  - Dọn server test (kill process, xác nhận port 8501 giải phóng).
+  - Cập nhật `agent/taskboard.html` (Phase 4 done, Phase 5 current), `docs/progress-report.md`
+    và `agent/contexts/progress-report.html` (giải thích 3 module mới theo pattern đã chốt,
+    insight mới về AppTest vs curl). Republish artifact.
+- **Quyết định đưa ra:**
+  - `on_progress` là tham số **optional**, không phá vỡ chữ ký gọi cũ từ CLI.
+  - Trách nhiệm 2 trang tách rõ: **Run Evaluation** chỉ để kích hoạt run (không hiện chi
+    tiết case), **Results Explorer** là nơi duy nhất xem sâu — tránh trùng lặp UI.
+  - Verify UI Streamlit **phải** dùng `AppTest` (hoặc tương đương chạy script thật), không
+    dùng `curl`/`py_compile` làm bằng chứng đủ — ghi lại thành nguyên tắc cho Phase 5.
+- **Trạng thái:** done — **Phase 4 hoàn thành toàn bộ task cốt lõi**, verify bằng AppTest thật.
+- **Việc còn lại / next:** Bắt đầu **Phase 5 — Tính năng nâng cao**: `pages/compare_runs.py`
+  (so sánh pairwise A/B giữa 2 run/model), `pages/calibration.py` (chấm human label, lưu file
+  JSON ngay sau mỗi lần chấm, tính agreement rate judge vs human).

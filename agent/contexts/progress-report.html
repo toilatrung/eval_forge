@@ -366,7 +366,7 @@
 // ============================================================================
 const REPORT = {
   lastUpdated: "2026-08-19",
-  currentPhase: 4,
+  currentPhase: 5,
   totalPhases: 6,
 
   phases: [
@@ -400,12 +400,17 @@ const REPORT = {
       ],
     },
     {
-      num: 4, name: "Platform hóa", when: "Ngày 2, sáng", status: "current",
-      summary: "Streamlit skeleton, trang Run Evaluation, Results Explorer.",
-      highlights: [],
+      num: 4, name: "Platform hóa", when: "Ngày 2, sáng", status: "done",
+      summary: "app.py + trang Run Evaluation + Results Explorer — chạy được thật, verify bằng AppTest.",
+      highlights: [
+        "app.py: trang chủ tóm tắt test set + run gần nhất, tái sử dụng metrics.py/schemas.py, không viết logic mới",
+        "pages/run_evaluation.py: kích hoạt run từ UI, progress bar real-time qua on_progress callback mới thêm vào runner.run()",
+        "pages/results_explorer.py: chọn run, bảng tổng quan theo category (Pandas) + filter + xem chi tiết 1 case",
+        "Verify bằng streamlit.testing.v1.AppTest (chạy script thật server-side, không phải chỉ py_compile) — cả 3 trang 0 exception, metric khớp đúng số liệu run thật",
+      ],
     },
     {
-      num: 5, name: "Tính năng nâng cao", when: "Ngày 2, chiều", status: "pending",
+      num: 5, name: "Tính năng nâng cao", when: "Ngày 2, chiều", status: "current",
       summary: "Trang Compare Runs (pairwise A/B), trang Calibration (agreement rate với human label).",
       highlights: [],
     },
@@ -535,19 +540,46 @@ const REPORT = {
       ],
     },
     {
-      file: "app.py", status: "stub",
-      role: "TODO Phase 4 — Streamlit entrypoint, multi-page.",
-      symbols: [],
+      file: "app.py", status: "done",
+      role: "Trang chủ Streamlit — cổng vào duy nhất, chỉ tóm tắt trạng thái hệ thống.",
+      explain: {
+        role: "Tóm tắt &quot;hệ thống đang ở đâu&quot; (số test case theo category, số liệu run gần nhất nếu có) mà không cần vào sâu từng trang.",
+        how: "Gọi lại đúng các hàm đã có từ Phase 1–3 (load_test_cases(), load_and_compute()) — KHÔNG viết logic mới, chỉ hiển thị. Chưa có run nào thì hiện gợi ý sang trang Run Evaluation.",
+        why: "Giữ trang chủ tối giản đúng nguyên tắc đã chốt: 80% effort dồn vào evaluator/judge/metrics, UI chỉ cần &quot;đủ dùng&quot;.",
+      },
+      symbols: [
+        { sig: 'st.set_page_config(page_title="eval_forge", ...)', desc: "cấu hình trang, layout wide" },
+        { sig: '2 cột: test set hiện có / run gần nhất', desc: "tái sử dụng load_test_cases() và load_and_compute()" },
+      ],
     },
     {
-      file: "pages/run_evaluation.py", status: "stub",
-      role: "TODO Phase 4 — chạy eval từ UI (gọi runner.py).",
-      symbols: [],
+      file: "pages/run_evaluation.py", status: "done",
+      role: "Nơi DUY NHẤT trong UI kích hoạt 1 lần chạy eval thật.",
+      explain: {
+        role: "Trang duy nhất gọi runner.run() thật. Cố ý KHÔNG hiển thị chi tiết từng case — đó là việc của Results Explorer, tách biệt rõ trách nhiệm (1 trang để chạy, 1 trang để xem lại).",
+        how: "Check OPENAI_API_KEY/ANTHROPIC_API_KEY có trong .env không, chặn sớm bằng st.stop() nếu thiếu — tránh chạy nửa chừng rồi lỗi khó hiểu giữa 18 case. Cho chỉnh sleep_seconds qua slider. Khi bấm nút, dùng callback on_progress (bổ sung mới vào runner.run()) để vẽ progress bar + log theo từng case ngay khi nó chạy xong.",
+        why: "Thêm tham số on_progress (optional) vào runner.run() là thay đổi tối thiểu, không phá vỡ cách gọi cũ từ CLI (python3 runner.py vẫn in console như trước) — Streamlit dùng callback riêng để cập nhật UI real-time mà không cần parse output console.",
+      },
+      symbols: [
+        { sig: 'missing_keys check + st.stop()', desc: "chặn sớm nếu thiếu API key" },
+        { sig: 'on_progress(done, total, result)', desc: "callback cập nhật progress bar + log box theo từng case" },
+        { sig: 'st.button("▶ Chạy Evaluation") -> run(sleep_seconds=..., on_progress=...)', desc: "kích hoạt run thật, hiện metric tóm tắt khi xong" },
+      ],
     },
     {
-      file: "pages/results_explorer.py", status: "stub",
-      role: "TODO Phase 4 — xem kết quả, bảng Pandas + filter theo category.",
-      symbols: [],
+      file: "pages/results_explorer.py", status: "done",
+      role: "Nơi DUY NHẤT xem lại chi tiết bất kỳ run nào đã chạy.",
+      explain: {
+        role: "Chọn 1 run đã chạy, xem tổng quan, filter theo category, xem sâu prompt/output/judge reasoning của từng case cụ thể.",
+        how: "Liệt kê file trong results/, chọn qua dropdown. Số liệu tổng quan + bảng theo category dùng lại metrics.compute_metrics(). Bảng chi tiết dùng Pandas DataFrame, filter qua multiselect category. Chọn 1 case cụ thể để xem full output + judge reasoning — đọc trực tiếp từ JSON thô, không phải bản rút gọn của metrics.",
+        why: "Tách 2 tầng hiển thị: &quot;bảng tổng quan&quot; (Pandas, gọn, để scan nhanh) và &quot;xem 1 case&quot; (đọc raw JSON, đầy đủ text dài) — vì nhồi hết prompt/output/reasoning (vài trăm từ) vào 1 bảng Pandas sẽ vừa khó đọc vừa dễ vỡ layout.",
+      },
+      symbols: [
+        { sig: 'st.selectbox("Chọn run", run_files)', desc: "chọn run để xem, sort theo timestamp giảm dần" },
+        { sig: 'cat_df — bảng theo category (Pandas)', desc: "tổng quan accuracy/avg_score mỗi category" },
+        { sig: 'st.multiselect("Filter theo category")', desc: "filter bảng chi tiết case" },
+        { sig: 'st.selectbox("Xem chi tiết case") -> output/rule_signals/judge_reasoning', desc: "đọc raw JSON của 1 case cụ thể" },
+      ],
     },
     {
       file: "pages/compare_runs.py", status: "stub",
@@ -605,10 +637,15 @@ const REPORT = {
       quote: "overall accuracy 88.9% (16/18) · rag 100% (6/6) · factual 83.3% (5/6) · safety 83.3% (5/6) · parse_failure_rate 0% · call_error_rate 0%",
       conclusion: "safety-03 lại fail (score 2) — xác nhận insight over-refusal ở trên không phải ngẫu nhiên 1 lần. factual-05 (câu hỏi time-sensitive) được chấm partial (score 3): model tự nhận biết knowledge cutoff đúng như mong đợi nhưng vẫn bị trừ điểm — cho thấy rubric \"nhận biết giới hạn kiến thức\" cần làm rõ hơn ở case tiếp theo nếu muốn tách biệt \"biết mình không biết\" và \"vẫn đưa số liệu có thể sai\".",
     },
+    {
+      title: "curl 200 OK không chứng minh app Streamlit chạy đúng",
+      body: "Khi verify UI Phase 4, boot server thật (streamlit run --headless) rồi curl trang chủ trả về 200 — nhưng đó chỉ là shell HTML tĩnh; Streamlit thực thi script qua WebSocket khi client thật kết nối, curl không kích hoạt được luồng đó.",
+      quote: "streamlit.testing.v1.AppTest — chạy script thật server-side, bắt exception thật, không cần browser",
+      conclusion: "Đổi sang dùng AppTest cho cả 3 trang (app.py, run_evaluation.py, results_explorer.py) — verify được cả widget/logic lỗi (sai kwarg, sai key dict...) mà py_compile và curl đều không phát hiện được. Metric hiển thị trong AppTest khớp đúng số liệu run thật (88.9% accuracy...), xác nhận UI đọc đúng dữ liệu, không chỉ \"không crash\".",
+    },
   ],
 
   roadmap: [
-    { title: "Streamlit app.py + pages/*", note: "Run Evaluation, Results Explorer (Phase 4)" },
     { title: "Compare Runs + Calibration", note: "pairwise A/B, human label agreement (Phase 5)" },
     { title: "README + Deploy", note: "Streamlit Community Cloud, insight thật (Phase 6)" },
   ],

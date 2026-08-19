@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -106,20 +107,31 @@ def run(
     test_cases_dir: str | Path = "test_cases",
     output_dir: str | Path = "results",
     sleep_seconds: float = DEFAULT_SLEEP_SECONDS,
+    on_progress: Callable[[int, int, CaseResult], None] | None = None,
 ) -> dict:
+    """Chạy toàn bộ test set.
+
+    `on_progress(done, total, result)` (nếu có) được gọi sau mỗi case — dùng để UI
+    (Streamlit, Phase 4) vẽ progress bar mà không phải parse output console. Không truyền gì
+    thì chỉ in tiến trình ra console (dùng khi chạy `python3 runner.py` trực tiếp).
+    """
+
     load_result = load_test_cases(test_cases_dir)
     if load_result.errors:
         print(f"CẢNH BÁO: {len(load_result.errors)} file/case load lỗi, bỏ qua:")
         for e in load_result.errors:
             print(f"  - {e.file}: {e.error}")
 
+    total = len(load_result.cases)
     case_results: list[CaseResult] = []
     for i, tc in enumerate(load_result.cases, start=1):
-        print(f"[{i}/{len(load_result.cases)}] {tc.id} ({tc.category})...", flush=True)
+        print(f"[{i}/{total}] {tc.id} ({tc.category})...", flush=True)
         result = run_test_case(tc)
         case_results.append(result)
         print(f"    -> {result.status}" + (f" — {result.error}" if result.error else ""), flush=True)
-        if i < len(load_result.cases):
+        if on_progress:
+            on_progress(i, total, result)
+        if i < total:
             time.sleep(sleep_seconds)
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

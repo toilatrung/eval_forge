@@ -163,3 +163,32 @@ Format 1 entry:
   - Các quyết định khác: xem `AGENT.md` §5 (không đổi).
 - **Bước tiếp theo:** `app.py` (Streamlit skeleton), trang Run Evaluation, trang Results
   Explorer → hoàn tất Phase 4.
+
+---
+
+## Snapshot — Session 9 (2026-08-19)
+- **Phase hiện tại:** **Phase 4 hoàn thành**. Chuyển sang **Phase 5 — Tính năng nâng cao**.
+- **Đã có:**
+  - Mọi thứ ở Snapshot Session 8, cộng thêm:
+  - `runner.run()` có thêm tham số optional `on_progress` (không đổi hành vi CLI cũ).
+  - `app.py` — trang chủ Streamlit, tóm tắt test set + run gần nhất.
+  - `pages/run_evaluation.py` — kích hoạt run từ UI, progress bar real-time.
+  - `pages/results_explorer.py` — chọn run, bảng theo category, filter, xem chi tiết 1 case.
+  - Verify bằng `streamlit.testing.v1.AppTest` (không chỉ `py_compile`/`curl`) — 0 exception
+    ở cả 3 trang, metric khớp đúng số liệu run thật.
+  - `docs/progress-report.md` + `agent/contexts/progress-report.html` đã cập nhật đầy đủ
+    (giải thích 3 module mới, insight AppTest vs curl). Artifact đã republish.
+  - `agent/taskboard.html`: Phase 4 done, Phase 5 current.
+- **Chưa có / còn thiếu:**
+  - `pages/compare_runs.py`, `pages/calibration.py` — vẫn stub (Phase 5).
+  - README.md chưa có mục Sample report/Demo (Phase 6). Chưa deploy.
+  - Các thay đổi Session 9 (`runner.py`, `app.py`, `pages/run_evaluation.py`,
+    `pages/results_explorer.py`, `taskboard.html`, `agent/contexts/*`,
+    `docs/progress-report.md`) **chưa commit**.
+- **Quyết định cần nhớ:**
+  - Verify UI Streamlit phải dùng `AppTest` (chạy script thật server-side) — `curl`/
+    `py_compile` không đủ để bắt lỗi runtime (widget sai kwarg, sai key dict...).
+  - Trách nhiệm 2 trang tách rõ: Run Evaluation = kích hoạt run; Results Explorer = xem sâu.
+  - Các quyết định khác: xem `AGENT.md` §5 (không đổi).
+- **Bước tiếp theo:** `pages/compare_runs.py` (pairwise A/B), `pages/calibration.py` (human
+  label + agreement rate) → hoàn tất Phase 5.
