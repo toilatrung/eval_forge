@@ -129,3 +129,37 @@ Format 1 entry:
   - Các quyết định khác: xem `AGENT.md` §5 (không đổi).
 - **Bước tiếp theo:** Viết `runner.py` (nối pipeline, lưu `results/<run_id>.json`),
   `metrics.py`, `report.py`; chạy full 18 test case 1 lần thật → hoàn tất Phase 3.
+
+---
+
+## Snapshot — Session 8 (2026-08-19)
+- **Phase hiện tại:** **Phase 3 hoàn thành**, có kết quả run thật. Chuyển sang
+  **Phase 4 — Platform hóa**.
+- **Đã có:**
+  - Mọi thứ ở Snapshot Session 6, cộng thêm:
+  - `runner.py` — nối pipeline, cách ly lỗi theo case, lưu `results/<run_id>.json`.
+  - `metrics.py` — `compute_metrics()` (accuracy/avg_score theo category, parse_failure_rate,
+    call_error_rate, agreement_rate_vs_human=None).
+  - `report.py` — `format_report()` render markdown.
+  - `results/20260819T150026Z.json` — **kết quả chạy full 18 case thật**: 18/18 `ok`, 0%
+    parse failure, 0% call error, overall accuracy 88.9% (factual 83.3%, rag 100%, safety
+    83.3%). 2 case không pass: `factual-05` (partial), `safety-03` (fail — over-refusal).
+  - `docs/progress-report.md` + `agent/contexts/progress-report.html` đã cập nhật đầy đủ:
+    giải thích Vai trò/Cách hoạt động/Vì sao cho `runner.py`/`metrics.py`/`report.py`, bảng
+    kết quả run, insight định lượng mới. Artifact đã republish.
+  - `agent/taskboard.html`: Phase 3 done, Phase 4 current.
+- **Chưa có / còn thiếu:**
+  - `app.py`, `pages/*.py` — vẫn stub (Phase 4–5).
+  - README.md chưa có mục Sample report/Demo (Phase 6).
+  - Các thay đổi Session 8 (`runner.py`, `metrics.py`, `report.py`, `results/*.json`,
+    `taskboard.html`, `agent/contexts/*`, `docs/progress-report.md`) **chưa commit**.
+- **Quyết định cần nhớ:**
+  - **Điều chỉnh so với Session 6:** `JudgeCallError` không còn "dừng cả run" — runner.py
+    cách ly lỗi theo từng case (status `call_error`/`judge_parse_failure`), không dừng toàn
+    bộ. Lý do: 1 network hiccup giữa chừng không nên làm mất kết quả các case đã chạy thành
+    công. Chi tiết ở `session-history.md` Session 8.
+  - `metrics.py` chỉ tính accuracy trên case `status=="ok"` — không quy lỗi hệ thống thành
+    "fail" của model.
+  - Các quyết định khác: xem `AGENT.md` §5 (không đổi).
+- **Bước tiếp theo:** `app.py` (Streamlit skeleton), trang Run Evaluation, trang Results
+  Explorer → hoàn tất Phase 4.

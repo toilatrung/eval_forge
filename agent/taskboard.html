@@ -218,7 +218,7 @@ const PHASES = [
     doneNote: "Done khi: llm_client/evaluator/llm_judge chạy độc lập trên vài case tay, judge xử lý parse failure rõ ràng.",
   },
   {
-    id: "p3", title: "Phase 3 — Pipeline hoàn chỉnh", when: "Ngày 1, tối", current: true,
+    id: "p3", title: "Phase 3 — Pipeline hoàn chỉnh", when: "Ngày 1, tối",
     tasks: [
       "runner.py — nối llm_client → evaluator → llm_judge, chạy full test set, lưu results/<run_id>.json",
       "runner.py — time.sleep() nhỏ giữa các call (rate limit)",
@@ -229,7 +229,7 @@ const PHASES = [
     doneNote: "Done khi: 1 lần chạy full pipeline đầu-cuối, có file kết quả + báo cáo tổng hợp.",
   },
   {
-    id: "p4", title: "Phase 4 — Platform hóa", when: "Ngày 2, sáng",
+    id: "p4", title: "Phase 4 — Platform hóa", when: "Ngày 2, sáng", current: true,
     tasks: [
       "app.py — Streamlit skeleton, multi-page",
       "Trang Run Evaluation — chạy runner.py từ UI, hiển thị tiến trình",

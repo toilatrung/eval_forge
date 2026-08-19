@@ -210,3 +210,41 @@ Format 1 entry:
 - **Việc còn lại / next:** Không đổi — vẫn là Phase 3. Từ phiên sau, mỗi khi có tiến độ/lỗi/
   insight mới thì cập nhật cả `agent/contexts/progress-report.html` (object `REPORT`) lẫn
   `session-history.md`/`context-log.md` theo quy trình đã chốt ở `AGENT.md` §8.
+
+## Session 8 — 2026-08-19
+- **Mục tiêu phiên:** Triển khai Phase 3 — `runner.py`, `metrics.py`, `report.py`; chạy full
+  18 test case thật; cập nhật báo cáo với giải thích chi tiết theo đúng yêu cầu trước đó
+  ("phải giải thích rõ từng module").
+- **Việc đã làm:**
+  - `runner.py`: nối `llm_client → evaluator → llm_judge`. Mỗi case chạy qua `run_test_case()`
+    — lỗi được cách ly theo case (`call_error`/`judge_parse_failure`), không lan sang case
+    khác. Nghỉ 1s giữa mỗi case. `run()` lưu toàn bộ kết quả (kể cả case lỗi) vào
+    `results/<run_id>.json` (run_id = timestamp UTC).
+  - `metrics.py`: `compute_metrics()` — accuracy/avg_score theo category (chỉ tính trên case
+    `status=="ok"`), `parse_failure_rate`/`call_error_rate` (tính trên tổng số case),
+    `agreement_rate_vs_human` cố ý để `None` (chưa có human label, Phase 5).
+  - `report.py`: `format_report()` — render báo cáo markdown từ metrics.
+  - **Chạy full 18 test case thật** (background task, ~2-3 phút do 36 lệnh gọi API +
+    sleep) → `results/20260819T150026Z.json`. Kết quả: **18/18 case chạy `ok`, 0% parse
+    failure, 0% call error**. `python3 metrics.py` + `python3 report.py` verify đúng số:
+    overall accuracy 88.9% (16/18); theo category — factual 83.3%, rag 100%, safety 83.3%.
+    2 case không pass: `factual-05` → `partial` (model tự nhận biết knowledge cutoff, đúng
+    hành vi mong đợi nhưng vẫn bị trừ điểm), `safety-03` → `fail` (xác nhận lại insight
+    over-refusal đã ghi ở Phase 2, lần này trong ngữ cảnh full run).
+  - Cập nhật `agent/taskboard.html`: Phase 3 done, Phase 4 current.
+  - Cập nhật cả `docs/progress-report.md` và `agent/contexts/progress-report.html`: thêm
+    giải thích đầy đủ (Vai trò/Cách hoạt động/Vì sao thiết kế vậy) cho `runner.py`,
+    `metrics.py`, `report.py`; thêm bảng kết quả run 18 case; thêm insight định lượng mới.
+    Republish artifact `docs/progress-report.md` (giữ nguyên link).
+- **Quyết định đưa ra:**
+  - **Điều chỉnh quyết định từ Session 6:** ban đầu ghi "`JudgeCallError` là lỗi hệ thống,
+    nên dừng/báo rõ" — khi thực viết `runner.py`, đổi thành **cách ly lỗi theo từng case,
+    không dừng cả run**, vì 1 network hiccup giữa chừng không nên làm mất kết quả của toàn
+    bộ case đã chạy thành công trước đó. Vẫn giữ nguyên tắc "báo rõ": mỗi case lỗi được ghi
+    đầy đủ trạng thái + lý do trong `results/*.json`, không bị giấu.
+  - `metrics.py` chỉ tính accuracy trên case đã judge được (`status=="ok"`) — không quy lỗi
+    hệ thống thành "fail" của model.
+- **Trạng thái:** done — **Phase 3 hoàn thành toàn bộ task cốt lõi**, có kết quả run thật.
+- **Việc còn lại / next:** Bắt đầu **Phase 4 — Platform hóa**: `app.py` (Streamlit skeleton,
+  multi-page), trang **Run Evaluation** (chạy `runner.py` từ UI), trang **Results Explorer**
+  (load `results/*.json`, bảng Pandas + filter theo category).
