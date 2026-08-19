@@ -205,7 +205,7 @@ const PHASES = [
     doneNote: "Done khi: repo có cấu trúc, .env an toàn, ≥15 test case load được qua schema.",
   },
   {
-    id: "p2", title: "Phase 2 — Core eval engine", when: "Ngày 1, chiều", current: true,
+    id: "p2", title: "Phase 2 — Core eval engine", when: "Ngày 1, chiều",
     tasks: [
       "llm_client.py — gọi OpenAI API (gpt-4o-mini), max_tokens thấp cho debug, retry + backoff",
       "evaluator.py — rule-based, chạy độc lập, test bằng vài case tay",
@@ -218,7 +218,7 @@ const PHASES = [
     doneNote: "Done khi: llm_client/evaluator/llm_judge chạy độc lập trên vài case tay, judge xử lý parse failure rõ ràng.",
   },
   {
-    id: "p3", title: "Phase 3 — Pipeline hoàn chỉnh", when: "Ngày 1, tối",
+    id: "p3", title: "Phase 3 — Pipeline hoàn chỉnh", when: "Ngày 1, tối", current: true,
     tasks: [
       "runner.py — nối llm_client → evaluator → llm_judge, chạy full test set, lưu results/<run_id>.json",
       "runner.py — time.sleep() nhỏ giữa các call (rate limit)",

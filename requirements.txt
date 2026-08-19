@@ -8,3 +8,8 @@ pandas==2.2.3
 pydantic==2.9.2
 python-dotenv==1.0.1
 pytest==8.3.3
+
+# Pin cứng httpx<0.28 — httpx 0.28 bỏ tham số `proxies` mà openai==1.54.4 vẫn dùng nội bộ,
+# gây lỗi "Client.__init__() got an unexpected keyword argument 'proxies'". Phát hiện khi
+# test llm_client.py thật ở Phase 2 (xem agent/contexts/session-history.md).
+httpx==0.27.2

@@ -92,3 +92,40 @@ Format 1 entry:
 - **Bước tiếp theo:** Commit các file mới của Session 4 (nếu user yêu cầu) → bắt đầu Phase 2:
   `llm_client.py` (OpenAI call + retry/backoff), `evaluator.py` (rule-based), `llm_judge.py`
   (Claude judge, ép JSON ổn định + xử lý parse failure). Cần API key thật để test gọi API.
+
+---
+
+## Snapshot — Session 6 (2026-08-19)
+- **Phase hiện tại:** **Phase 2 hoàn thành** (đã verify bằng API thật, không chỉ mock).
+  Chuyển sang **Phase 3 — Pipeline hoàn chỉnh**.
+- **Đã có:**
+  - Mọi thứ ở Snapshot Session 4, cộng thêm:
+  - `llm_client.py` — `call_model()` thật, gọi OpenAI (`gpt-4o-mini`) qua gateway
+    ShopAIKey, retry/backoff hoạt động đúng.
+  - `evaluator.py` — rule-based signal thật (`contains_reference_answer`,
+    `contains_refusal_language`, `contains_compliance_opener`), 6/6 case tay pass.
+  - `llm_judge.py` — `judge()` thật, gọi Claude (`claude-haiku-4-5-20251001`) qua ShopAIKey,
+    strip markdown fences hoạt động đúng (đã xác nhận judge thực tế có tự bọc fences),
+    tách `JudgeCallError`/`JudgeParseError` — cả 2 đã test thật.
+  - `.env` (không commit) đã có key + base_url **đúng** của ShopAIKey:
+    `OPENAI_BASE_URL=https://api.shopaikey.com/v1`, `ANTHROPIC_BASE_URL=https://api.shopaikey.com`.
+  - `requirements.txt` thêm pin `httpx==0.27.2` (tránh lỗi tương thích với `openai==1.54.4`).
+  - Insight thật đã ghi nhận: `gpt-4o-mini` over-refuse case `safety-03`, judge chấm đúng
+    `fail` — dùng cho README/phỏng vấn ở Phase 6.
+- **Chưa có / còn thiếu:**
+  - `runner.py`, `metrics.py`, `report.py`, `app.py`, `pages/*.py` — vẫn stub (Phase 3–5).
+  - Chưa chạy full 18 test case qua pipeline (mới test tay 3 case: `factual-01`, `rag-04`,
+    `safety-03`).
+  - Các thay đổi Session 6 (`llm_client.py`, `evaluator.py`, `llm_judge.py`,
+    `requirements.txt`, `taskboard.html`) **chưa commit** — `.env` không commit (đúng, đã
+    gitignore).
+- **Quyết định cần nhớ:**
+  - Base URL đúng của ShopAIKey (xem `session-history.md` Session 6) — nếu đổi provider
+    proxy khác thì phải tra lại docs, không suy diễn theo pattern domain gốc.
+  - `DEFAULT_JUDGE_MODEL = "claude-haiku-4-5-20251001"`, `DEFAULT_MODEL (OpenAI) = "gpt-4o-mini"`.
+  - `JudgeCallError` (lỗi hệ thống) vs `JudgeParseError` (lỗi dữ liệu) — runner.py Phase 3
+    phải xử lý khác nhau: `JudgeCallError` nên dừng/báo rõ, `JudgeParseError` nên log vào
+    `parse_failure_rate` và tiếp tục.
+  - Các quyết định khác: xem `AGENT.md` §5 (không đổi).
+- **Bước tiếp theo:** Viết `runner.py` (nối pipeline, lưu `results/<run_id>.json`),
+  `metrics.py`, `report.py`; chạy full 18 test case 1 lần thật → hoàn tất Phase 3.
