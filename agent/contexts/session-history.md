@@ -64,3 +64,23 @@ Format 1 entry:
 - **Việc còn lại / next:** Bắt đầu code thật cho **Phase 1** phần còn lại: schema Pydantic
   cho test case + viết 15–20 test case (3 category `factual`/`rag`/`safety`, có case khó)
   vào `test_cases/`. Xem `agent/taskboard.html` Phase 1.
+
+## Session 3 — 2026-08-19
+- **Mục tiêu phiên:** Sửa lại git identity cho đúng owner repo, và tạo `README.md`.
+- **Việc đã làm:**
+  - Push từ sandbox này thất bại do không có credential GitHub (không có username/token,
+    không có SSH key) — user xác nhận sẽ tự push từ máy thật.
+  - Sửa `git config user.name`/`user.email` từ giá trị đoán ban đầu sai (`son.pham@...`)
+    thành đúng identity của owner repo: `toilatrung <trung.trinhquang.work2303@gmail.com>`,
+    amend lại commit đầu (`--reset-author`) để author đúng trước khi push.
+  - Tạo `README.md`: problem statement, kiến trúc (mermaid diagram), tech stack, cấu trúc
+    dự án, hướng dẫn cài đặt (mô tả cách chạy dự kiến, ghi rõ code hiện mới là stub), roadmap
+    6 phase. **Không** bịa sample report hay link demo — để trống dạng checklist vì chưa có
+    thật (đúng phase 3/6, tránh đưa thông tin chưa xác thực).
+- **Quyết định đưa ra:**
+  - Git identity chuẩn cho repo này: `toilatrung <trung.trinhquang.work2303@gmail.com>` —
+    dùng cho mọi commit sau này trong repo, không dùng email `son.pham@...` nữa.
+- **Trạng thái:** done (tạo README xong; **chưa commit/push** — user chỉ yêu cầu tạo file,
+  chưa yêu cầu commit).
+- **Việc còn lại / next:** Hỏi/chờ user xác nhận commit + push README (và commit amend
+  identity fix) lên `origin/main`. Sau đó tiếp tục Phase 1: schema Pydantic + 15–20 test case.
