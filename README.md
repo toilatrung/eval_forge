@@ -1,3 +1,5 @@
+<img width="1920" height="1524" alt="image" src="https://github.com/user-attachments/assets/4f1ca4f8-bcac-4fd7-8ecb-05e54bfe3b71" />
+
 # eval_forge — LLM Evaluation Harness + Internal Platform
 
 Bộ công cụ đánh giá chất lượng output của LLM một cách có hệ thống: chạy test case qua
