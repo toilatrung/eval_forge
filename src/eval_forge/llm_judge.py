@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from anthropic import Anthropic, APIConnectionError, APIStatusError, RateLimitError
 
-from schemas import TestCase
+from eval_forge.schemas import TestCase
 
 DEFAULT_JUDGE_MODEL = "claude-haiku-4-5-20251001"  # rẻ, đủ cho demo — đổi ở đây nếu cần
 MAX_TOKENS = 512

@@ -26,15 +26,15 @@ văn phong của chính họ (hoặc của model cùng họ). Dự án này th�
 
 ```mermaid
 flowchart LR
-    TC["test_cases/*.json<br/>(schema Pydantic)"] --> R[runner.py]
-    R --> LC[llm_client.py<br/>OpenAI gpt-4o-mini]
-    LC --> EV[evaluator.py<br/>rule-based]
-    LC --> LJ[llm_judge.py<br/>Claude judge]
+    TC["test_cases/*.json<br/>(schema Pydantic)"] --> R[eval_forge/runner.py]
+    R --> LC[eval_forge/llm_client.py<br/>OpenAI gpt-4o-mini]
+    LC --> EV[eval_forge/evaluator.py<br/>rule-based]
+    LC --> LJ[eval_forge/llm_judge.py<br/>Claude judge]
     EV --> RES[(results/*.json)]
     LJ --> RES
-    RES --> M[metrics.py]
-    M --> RPT[report.py]
-    RES --> APP[app.py — Streamlit]
+    RES --> M[eval_forge/metrics.py]
+    M --> RPT[eval_forge/report.py]
+    RES --> APP[ui/app.py — Streamlit]
     APP --> P1[Run Evaluation]
     APP --> P2[Results Explorer]
     APP --> P3[Compare Runs]
@@ -42,11 +42,15 @@ flowchart LR
     P4 -.agreement rate.-> M
 ```
 
+`eval_forge` (core: schemas/llm_client/evaluator/llm_judge/runner/metrics/report) là 1 Python
+package độc lập với UI — `ui/` chỉ import ngược lại vào `eval_forge`, không có chiều ngược lại,
+để logic core test/dùng được mà không cần Streamlit.
+
 ## Tech stack
 
 | Layer | Công nghệ | Lý do chọn |
 |---|---|---|
-| Core logic | Python 3.11+ | Nhanh, ecosystem AI mạnh |
+| Core logic | Python 3.10+ | Nhanh, ecosystem AI mạnh |
 | LLM API (model test) | OpenAI API (`gpt-4o-mini`) | Rẻ, đủ để demo |
 | LLM API (judge) | Anthropic API (Claude) | Khác họ với model test → giảm self-preference bias |
 | Data validation | Pydantic | Ép schema test case, tránh lỗi ngầm khi JSON sai format |
@@ -60,21 +64,25 @@ flowchart LR
 ## Cấu trúc dự án
 
 ```
-llm_client.py       # gọi OpenAI API cho model cần eval
-evaluator.py        # rule-based evaluator
-llm_judge.py         # gọi Claude làm judge, ép JSON output ổn định
-runner.py           # nối pipeline: load test case -> model -> evaluate -> judge -> lưu results/*.json
-metrics.py          # accuracy, agreement rate, parse_failure_rate
-report.py           # xuất báo cáo tổng hợp
-app.py              # Streamlit entrypoint (multi-page)
-pages/
-  run_evaluation.py     # chạy eval từ UI
-  results_explorer.py   # xem kết quả
-  compare_runs.py        # so sánh pairwise A/B giữa 2 model/run
-  calibration.py          # chấm human label, tính agreement rate với judge
-test_cases/         # 15-20 test case, 3 category: factual / rag / safety
-results/            # output các lần run (không commit *.json, xem .gitignore)
-agent/              # tài liệu điều hành: AGENT.md, taskboard.html, contexts/
+src/eval_forge/          # core eval engine — package Python cài qua `pip install -e .`
+  schemas.py                # Pydantic schema cho test case + loader
+  llm_client.py              # gọi OpenAI API cho model cần eval
+  evaluator.py               # rule-based evaluator
+  llm_judge.py                # gọi Claude làm judge, ép JSON output ổn định
+  runner.py                  # nối pipeline: load test case -> model -> evaluate -> judge -> lưu results/*.json
+  metrics.py                 # accuracy, agreement rate, parse_failure_rate
+  report.py                  # xuất báo cáo tổng hợp
+ui/                       # Streamlit UI — chỉ import từ eval_forge, không chứa logic eval
+  app.py                     # entrypoint (multi-page)
+  pages/
+    run_evaluation.py           # chạy eval từ UI
+    results_explorer.py         # xem kết quả
+    compare_runs.py              # so sánh pairwise A/B giữa 2 model/run
+    calibration.py                # chấm human label, tính agreement rate với judge
+test_cases/               # 15-20 test case, 3 category: factual / rag / safety
+results/                  # output các lần run (không commit *.json, xem .gitignore)
+agent/                    # tài liệu điều hành: AGENT.md, taskboard.html, contexts/
+pyproject.toml            # cấu hình package eval_forge (src-layout, editable install)
 ```
 
 ## Cài đặt & chạy (khi code đã hoàn thiện)
@@ -82,12 +90,14 @@ agent/              # tài liệu điều hành: AGENT.md, taskboard.html, conte
 ```bash
 python -m venv .venv && source .venv/bin/activate   # hoặc .venv\Scripts\activate trên Windows
 pip install -r requirements.txt
+pip install -e .          # cài eval_forge (src/eval_forge) ở dạng editable, để `import eval_forge`
+                           # chạy được từ mọi nơi, kể cả `streamlit run ui/app.py`
 cp .env.example .env   # điền OPENAI_API_KEY, ANTHROPIC_API_KEY
-python runner.py       # chạy full test set, kết quả lưu ở results/
-streamlit run app.py   # mở dashboard
+python -m eval_forge.runner   # chạy full test set, kết quả lưu ở results/
+streamlit run ui/app.py       # mở dashboard
 ```
 
-> Lệnh trên mô tả cách chạy dự kiến — `runner.py`/`app.py` hiện mới là stub, xem
+> Lệnh trên mô tả cách chạy dự kiến — xem
 > [`agent/taskboard.html`](agent/taskboard.html) để biết phase nào đang làm.
 
 ## Sample report & Demo

@@ -1,4 +1,4 @@
-"""pages/run_evaluation.py — trang Streamlit chạy eval từ UI (gọi runner.py).
+"""ui/pages/run_evaluation.py — trang Streamlit chạy eval từ UI (gọi eval_forge.runner).
 
 Chỉ chịu trách nhiệm: kiểm tra config, kích hoạt 1 run, hiển thị tiến trình + tóm tắt nhanh.
 Xem chi tiết từng case ở trang Results Explorer — tách biệt trách nhiệm giữa 2 trang.
@@ -11,9 +11,9 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 
-from metrics import compute_metrics
-from runner import DEFAULT_SLEEP_SECONDS, run
-from schemas import load_test_cases
+from eval_forge.metrics import compute_metrics
+from eval_forge.runner import DEFAULT_SLEEP_SECONDS, run
+from eval_forge.schemas import load_test_cases
 
 load_dotenv()
 

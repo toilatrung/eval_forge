@@ -40,15 +40,18 @@ Xây một LLM evaluation harness + platform nội bộ (demo dạng dashboard) 
 
 `requirements.txt` pin version cụ thể (không dùng `>=` mở).
 
-## 3. Cấu trúc module dự kiến
+## 3. Cấu trúc module (đã reorganize thành package `src/eval_forge/` + `ui/` — src-layout, xem
+README.md §"Cấu trúc dự án" để không phải sửa 2 nơi)
 ```
-llm_client.py     # gọi OpenAI API cho model cần eval
-evaluator.py      # rule-based evaluator, chạy độc lập, test được bằng tay
-llm_judge.py      # gọi Claude làm judge, ép JSON output ổn định (phần khó nhất)
-runner.py         # nối pipeline: load test case -> gọi model -> evaluate -> judge -> lưu results/*.json
-metrics.py        # tính số liệu tổng hợp (accuracy, agreement rate, parse failure rate...)
-report.py         # xuất báo cáo từ metrics
-app.py            # Streamlit entrypoint (multi-page)
+src/eval_forge/     # core eval engine, cài qua `pip install -e .`
+  llm_client.py     # gọi OpenAI API cho model cần eval
+  evaluator.py      # rule-based evaluator, chạy độc lập, test được bằng tay
+  llm_judge.py      # gọi Claude làm judge, ép JSON output ổn định (phần khó nhất)
+  runner.py         # nối pipeline: load test case -> gọi model -> evaluate -> judge -> lưu results/*.json
+  metrics.py        # tính số liệu tổng hợp (accuracy, agreement rate, parse failure rate...)
+  report.py         # xuất báo cáo từ metrics
+ui/                 # Streamlit UI, chỉ import từ eval_forge (không chiều ngược lại)
+  app.py            # entrypoint (multi-page)
   pages/
     run_evaluation.py     # Trang chạy eval từ UI
     results_explorer.py   # Trang xem kết quả

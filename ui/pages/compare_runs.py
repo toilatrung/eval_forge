@@ -1,4 +1,4 @@
-"""pages/compare_runs.py — so sánh pairwise A/B giữa 2 run đã chạy.
+"""ui/pages/compare_runs.py — so sánh pairwise A/B giữa 2 run đã chạy.
 
 Lưu ý: dự án hiện tại chỉ test 1 model tại 1 thời điểm (`DEFAULT_MODEL` trong `llm_client.py`)
 — "so sánh" ở đây nghĩa là so sánh 2 **run** (ví dụ trước/sau khi đổi model, đổi prompt, hoặc
@@ -12,7 +12,7 @@ import json
 import pandas as pd
 import streamlit as st
 
-from metrics import list_runs, load_and_compute
+from eval_forge.metrics import list_runs, load_and_compute
 
 st.set_page_config(page_title="Compare Runs — eval_forge", page_icon="🧪", layout="wide")
 st.title("Compare Runs")
