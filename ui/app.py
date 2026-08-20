@@ -1,16 +1,18 @@
-"""app.py — Streamlit entrypoint (multi-page, tự động lấy page từ pages/).
+"""ui/app.py — Streamlit entrypoint (multi-page, tự động lấy page từ ui/pages/).
 
 Trang chủ chỉ tóm tắt: số test case hiện có, và (nếu đã từng chạy) số liệu của run gần nhất
-— chi tiết chạy eval / xem kết quả nằm ở pages/run_evaluation.py và pages/results_explorer.py.
+— chi tiết chạy eval / xem kết quả nằm ở ui/pages/run_evaluation.py và ui/pages/results_explorer.py.
 Giữ trang chủ tối giản theo đúng nguyên tắc "UI chỉ cần đủ dùng" (agent/AGENT.md §5).
+
+Chạy: `streamlit run ui/app.py` từ thư mục gốc repo (cần `pip install -e .` trước, xem README).
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from metrics import list_runs, load_and_compute
-from schemas import load_test_cases
+from eval_forge.metrics import list_runs, load_and_compute
+from eval_forge.schemas import load_test_cases
 
 st.set_page_config(page_title="eval_forge", page_icon="🧪", layout="wide")
 

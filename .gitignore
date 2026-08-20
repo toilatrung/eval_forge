@@ -9,6 +9,11 @@ __pycache__/
 venv/
 .pytest_cache/
 
+# Build artifact của `pip install -e .` (src-layout)
+*.egg-info/
+build/
+dist/
+
 # Kết quả eval — không commit output run, trừ khi cố tình đặt mẫu demo ở nơi khác
 results/*.json
 

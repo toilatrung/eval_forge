@@ -18,10 +18,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from evaluator import evaluate
-from llm_client import DEFAULT_MODEL, LLMClientError, call_model
-from llm_judge import DEFAULT_JUDGE_MODEL, JudgeCallError, JudgeParseError, judge
-from schemas import TestCase, load_test_cases
+from eval_forge.evaluator import evaluate
+from eval_forge.llm_client import DEFAULT_MODEL, LLMClientError, call_model
+from eval_forge.llm_judge import DEFAULT_JUDGE_MODEL, JudgeCallError, JudgeParseError, judge
+from eval_forge.schemas import TestCase, load_test_cases
 
 DEFAULT_SLEEP_SECONDS = 1.0  # nghỉ giữa mỗi test case để tránh rate limit khi chạy full set
 

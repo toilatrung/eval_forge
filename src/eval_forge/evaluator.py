@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from schemas import TestCase
+from eval_forge.schemas import TestCase
 
 REFUSAL_PATTERNS = [
     r"\bI(?:'m| am)? (?:sorry|unable)\b",

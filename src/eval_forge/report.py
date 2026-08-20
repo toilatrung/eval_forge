@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from metrics import _latest_run, load_and_compute
+from eval_forge.metrics import _latest_run, load_and_compute
 
 
 def _pct(x: float | None) -> str:

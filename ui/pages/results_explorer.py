@@ -1,4 +1,4 @@
-"""pages/results_explorer.py — trang Streamlit xem kết quả (load results/*.json,
+"""ui/pages/results_explorer.py — trang Streamlit xem kết quả (load results/*.json,
 bảng Pandas + filter theo category).
 """
 
@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from metrics import list_runs, load_and_compute
+from eval_forge.metrics import list_runs, load_and_compute
 
 st.set_page_config(page_title="Results Explorer — eval_forge", page_icon="🧪", layout="wide")
 st.title("Results Explorer")

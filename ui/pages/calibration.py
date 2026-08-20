@@ -1,4 +1,4 @@
-"""pages/calibration.py — chấm human label cho từng case đã được judge chấm, lưu ra file
+"""ui/pages/calibration.py — chấm human label cho từng case đã được judge chấm, lưu ra file
 JSON ngay sau mỗi lần chấm (không chỉ giữ trong session_state), tính agreement rate thật
 giữa judge và người.
 """
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from metrics import compute_metrics, list_runs, load_labels, save_label
+from eval_forge.metrics import compute_metrics, list_runs, load_labels, save_label
 
 st.set_page_config(page_title="Calibration — eval_forge", page_icon="🧪", layout="wide")
 st.title("Calibration")
